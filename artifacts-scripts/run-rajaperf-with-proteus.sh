@@ -8,7 +8,8 @@ fi
 
 git clone https://github.com/Olympus-HPC/proteus.git
 cd proteus
-git reset --hard 1ace4ca7c7cfe810065e37adb07a40a088c1e6e6
+git reset --hard bd488f3913996dde067ebda704ad670a33eaf37b
+git revert eb955e41da28885892316cc326f77eb7cd6641c9 --no-commit
 cd ..
 
 if [[ "$MACHINE" == "amd" ]]; then
