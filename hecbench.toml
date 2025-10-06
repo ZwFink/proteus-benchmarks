@@ -179,6 +179,12 @@ default = "32 96 256 26 26 5 100"
 [hecbench.bezier-surface.amd.cpp]
 path = "benchmarks/cpp_frontend/hip/bezier-surface"
 exe = "bezier-surface-cpp-frontend-proteus.x"
+[hecbench.bezier-surface.amd.dsl]
+path = "benchmarks/hecbench/dsl/bezier-surface"
+exe = "bezier-surface-proteus.x"
+[hecbench.bezier-surface.nvidia.dsl]
+path = "benchmarks/hecbench/dsl/bezier-surface"
+exe = "bezier-surface-proteus.x"
 [hecbench.bezier-surface.inputs]
 default = "-n 8192"
 
