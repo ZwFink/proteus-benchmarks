@@ -169,6 +169,9 @@ exe = "conv3d-cpp-frontend-proteus.x"
 [hecbench.conv3d.amd.dsl]
 path = "benchmarks/hecbench/dsl/conv3d"
 exe = "conv3d-proteus.x"
+[hecbench.conv3d.nvidia.dsl]
+path = "benchmarks/hecbench/dsl/conv3d"
+exe = "conv3d-proteus.x"
 [hecbench.conv3d.inputs]
 default = "32 96 256 26 26 5 100"
 
