@@ -197,10 +197,8 @@ class Executor:
         results = pd.DataFrame()
         caching = pd.DataFrame()
         assert (
-            self.exemode == "aot"
-            or self.exemode == "proteus"
-            or self.exemode == "jitify"
-        ), "Expected aot or proteus or jitify for exemode"
+            self.exemode in ("aot", "proteus", "jitify", "cpp")
+        ), "Expected aot or proteus or jitify or cpp for exemode"
 
         ctime = self.builder.ctime
         exe_size = (
@@ -343,7 +341,7 @@ rep: {repeat}
             results = pd.concat((results, df), ignore_index=True)
 
             # Skip parsing caching stats when running AOT.
-            if self.exemode != "proteus":
+            if self.exemode not in ("proteus", "cpp"):
                 continue
 
             # Parse Proteus caching info.
@@ -470,7 +468,7 @@ def main():
         "-x",
         "--exemode",
         help="execution mode",
-        choices=("aot", "proteus", "jitify"),
+        choices=("aot", "proteus", "jitify", "cpp"),
     )
     parser.add_argument(
         "-m",
@@ -564,7 +562,7 @@ def main():
     if not runconfigs[args.exemode]:
         raise Exception("Runconfig is empty")
 
-    if args.exemode == "proteus":
+    if args.exemode in ("proteus", "cpp"):
         for runconfig in runconfigs[args.exemode]:
             check_valid_proteus_env(runconfig["env"])
 
@@ -648,7 +646,7 @@ def main():
     def build_and_run_experiments(experiments):
         # Build, run, and collect results for each experiment and profiling mode.
         for builder in builders:
-            builder.build(args.exemode == "proteus")
+            builder.build(args.exemode in ("proteus", "cpp"))
             print(
                 "=> Built",
                 builder.build_path,
