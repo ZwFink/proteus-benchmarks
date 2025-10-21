@@ -23,13 +23,7 @@
 
 using namespace proteus;
 
-#if PROTEUS_ENABLE_HIP
 #define INCLUDE_HEADER "#include <hip/hip_runtime.h>"
-#elif PROTEUS_ENABLE_CUDA
-#define INCLUDE_HEADER "#include <cuda_runtime.h>"
-#else
-#error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA defined"
-#endif
 
 struct Params {
   size_t natlig;

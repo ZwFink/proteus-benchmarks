@@ -7,19 +7,12 @@ CC        = ${PROTEUS_CC}
 OPTIMIZE  = yes
 DEBUG     = no
 PROTEUS_PATH  ?=/path/to/proteus/install
-ENABLE_PROTEUS ?= yes
 
 ###############################################################################
 # Program name & source code list
 ###############################################################################
 
-ifeq ($(ENABLE_PROTEUS),yes)
-  SUFFIX = -proteus
-else
-  SUFFIX = -aot
-endif
-
-program = attention-cpp-frontend$(SUFFIX).x
+program = attention-cpp-frontend-proteus.x
 
 source = main.cpp
 obj = $(source:.cpp=.o)
@@ -69,10 +62,8 @@ ifeq ($(OPTIMIZE),yes)
 	CFLAGS += -O3
 endif
 
-ifeq ($(ENABLE_PROTEUS),yes)
-	CFLAGS  += -I${PROTEUS_PATH}/include -DPROTEUS_ENABLE_HIP
-	LDFLAGS += -Wl,-rpath,${PROTEUS_PATH}/lib64 -L${PROTEUS_PATH}/lib64/ -lproteus
-endif
+CFLAGS  += -I${PROTEUS_PATH}/include -DPROTEUS_ENABLE_HIP
+LDFLAGS += -Wl,-rpath,${PROTEUS_PATH}/lib64 -L${PROTEUS_PATH}/lib64/ -lproteus
 
 ###############################################################################
 # Targets

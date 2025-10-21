@@ -8,19 +8,12 @@ OPTIMIZE        = yes
 DEBUG           = no
 PROFILE         = no
 PROTEUS_PATH    ?= /path/to/proteus/install
-ENABLE_PROTEUS  ?= yes
 
 ###############################################################################
 # Program name & source code list
 ###############################################################################
 
-ifeq ($(ENABLE_PROTEUS),yes)
-  SUFFIX = -proteus
-else
-  SUFFIX = -aot
-endif
-
-program = adam-cpp$(SUFFIX).x
+program = adam-cpp-proteus.x
 
 source = \
   adam.cpp
@@ -81,10 +74,8 @@ ifeq ($(OPTIMIZE),yes)
 endif
 
 # Proteus Annotations
-ifeq ($(ENABLE_PROTEUS),yes)
-  CFLAGS  += -I${PROTEUS_PATH}/include -DPROTEUS_ENABLE_HIP
-  LDFLAGS += -Wl,-rpath,${PROTEUS_PATH}/lib64 -L${PROTEUS_PATH}/lib64/ -lproteus
-endif
+CFLAGS  += -I${PROTEUS_PATH}/include -DPROTEUS_ENABLE_HIP
+LDFLAGS += -Wl,-rpath,${PROTEUS_PATH}/lib64 -L${PROTEUS_PATH}/lib64/ -lproteus
 
 ###############################################################################
 # Targets

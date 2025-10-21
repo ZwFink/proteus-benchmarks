@@ -4,11 +4,7 @@
 #include <string>
 #include <iomanip>
 
-#if defined(PROTEUS_ENABLE_HIP)
 #include <hip/hip_runtime.h>
-#elif defined(PROTEUS_ENABLE_CUDA)
-#include <cuda_runtime.h>
-#endif
 
 #ifndef DEFAULT_PPWI
 #define DEFAULT_PPWI 1

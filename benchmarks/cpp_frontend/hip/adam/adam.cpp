@@ -14,17 +14,8 @@
 
 using namespace proteus;
 
-#if PROTEUS_ENABLE_HIP
 #define TARGET "hip"
 #define INCLUDE "#include <hip/hip_runtime.h>"
-
-#elif PROTEUS_ENABLE_CUDA
-#define TARGET "cuda"
-#define INCLUDE "#include <cuda_runtime.h>"
-
-#else
-#error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA defined"
-#endif
 
 typedef enum {
   ADAM_MODE_0 = 0, // eps under square root

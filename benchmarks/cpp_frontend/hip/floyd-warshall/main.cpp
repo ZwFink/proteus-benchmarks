@@ -10,15 +10,10 @@
 #include "inja/inja.h"
 
 #include "../../gpu/gpu_common.h"
-#if PROTEUS_ENABLE_HIP
 #include <hiprand/hiprand.h>
-#elif PROTEUS_ENABLE_CUDA
-#include <curand.h>
-#endif
 
 using namespace proteus;
 
-#if PROTEUS_ENABLE_HIP
 static constexpr const char *kDeviceInclude = "#include <hip/hip_runtime.h>";
 using RandGenerator = hiprandGenerator_t;
 using RandStatus = hiprandStatus_t;
@@ -32,23 +27,6 @@ inline RandStatus randGenerate(RandGenerator gen, unsigned int *data, size_t cou
   return hiprandGenerate(gen, data, count);
 }
 inline RandStatus randDestroy(RandGenerator gen) { return hiprandDestroyGenerator(gen); }
-#elif PROTEUS_ENABLE_CUDA
-static constexpr const char *kDeviceInclude = "#include <cuda_runtime.h>";
-using RandGenerator = curandGenerator_t;
-using RandStatus = curandStatus_t;
-constexpr RandStatus RAND_STATUS_SUCCESS = CURAND_STATUS_SUCCESS;
-constexpr curandRngType RAND_RNG_TYPE = CURAND_RNG_PSEUDO_DEFAULT;
-inline RandStatus randCreate(RandGenerator *gen) { return curandCreateGenerator(gen, RAND_RNG_TYPE); }
-inline RandStatus randSetSeed(RandGenerator gen, unsigned long long seed) {
-  return curandSetPseudoRandomGeneratorSeed(gen, seed);
-}
-inline RandStatus randGenerate(RandGenerator gen, unsigned int *data, size_t count) {
-  return curandGenerate(gen, data, count);
-}
-inline RandStatus randDestroy(RandGenerator gen) { return curandDestroyGenerator(gen); }
-#else
-#error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA defined"
-#endif
 
 inline void RandCheck(RandStatus status, const char *file, int line) {
   if (status != RAND_STATUS_SUCCESS) {
