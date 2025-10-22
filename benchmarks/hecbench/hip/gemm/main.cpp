@@ -1,44 +1,23 @@
+// RUN: rm -rf .proteus
+// RUN: ./for | %FILECHECK %s --check-prefixes=CHECK
+// RUN: rm -rf .proteus
+
 #include <cstdlib>
 #include <cstring>
+#include <proteus/JitInterface.hpp>
 #include <cctype>
 #include <iostream>
 #include <chrono>
 #include <string>
-#include <string_view>
-#include <memory>
-#include <utility>
-#include <proteus/CppJitModule.hpp>
-#include "inja/inja.h"
 
-using namespace proteus;
+
 #include "../../../gpu/gpu_common.h"
 
-constexpr const char *kDeviceInclude = "#include <hip/hip_runtime.h>";
-
 constexpr int MatmulTileSize = 16;
-constexpr std::string_view StrHipNontiledMatmulKernelTemplate = R"cpp(
-{{ include }}
-extern "C" __global__ void hipNontiledMatmulKernel(const double * A,
-                                              const double * B,
-                                              double * C) {
-  constexpr int N = {{ N }};
-  int Tx = threadIdx.x;
-  int Ty = threadIdx.y;
-  int Row = blockIdx.y * blockDim.y + Ty;
-  int Col = blockIdx.x * blockDim.x + Tx;
-
-  if (Row < N && Col < N) {
-    double Sum = 0.0;
-    #pragma unroll 1
-    for (int K = 0; K < N; ++K) {
-      Sum += A[Row * N + K] * B[K * N + Col];
-    }
-    C[Row * N + Col] = Sum;
-  }
-}
-)cpp";
 // Non-tiled (naive) HIP kernel for matrix multiplication: C = A * B
-__global__ void hipNontiledMatmulKernelstatic (const double * __restrict__ A,
+__attribute__((annotate("jit", 4)))
+__global__
+void hipNontiledMatmulKernelstatic (const double * __restrict__ A,
                                            const double * __restrict__ B,
                                            double * __restrict__ C,
                                            int N) {
@@ -76,21 +55,22 @@ constexpr int RegTileN = 4;
 constexpr int BlockTileM = 64;
 constexpr int BlockTileN = 64;
 constexpr int KTile = 8;
-constexpr std::string_view StrHipRegSharedTiledMatmulKernelTemplate = R"cpp(
-{{ include }}
-extern "C" __global__ void hipRegSharedTiledMatmulKernel(const double * A,
-                                              const double * B,
-                                              double * C) {
+#ifdef ENABLE_PROTEUS
+#warning "PROTEUS_ENABLE_HIP"
+__attribute__((annotate("jit", 4)))
+#endif
+__global__
+void hipRegSharedTiledMatmulKernel(const double * __restrict__ A,
+                                              const double * __restrict__ B,
+                                              double * __restrict__ C,
+                                              int N) {
   // Shared tiles for current K-slice via dynamic shared memory
-  // 1 = blockTimeM, 2 = kTile
-  constexpr int N = {{ N }};
-  constexpr int BlockTileM = {{ BlockTileM }};
-  constexpr int KTile = {{ KTile }};
-  constexpr int BlockTileN = {{ BlockTileN }};
-  constexpr int RegTileM = {{ RegTileM }};
-  constexpr int RegTileN = {{ RegTileN }};
-
-  __shared__ double smem[(BlockTileM*KTile) + (KTile*BlockTileN)];
+  #ifdef ENABLE_PROTEUS
+  double *smem = proteus::shared_array<double, BlockTileM * KTile + KTile * BlockTileN>(
+      BlockTileM * KTile + KTile * BlockTileN);
+  #else
+  extern __shared__ double smem[];
+  #endif
   double *AsTile = smem;                                 // [BlockTileM x KTile]
   double *BsTile = AsTile + (BlockTileM * KTile);        // [KTile x BlockTileN]
 
@@ -111,7 +91,7 @@ extern "C" __global__ void hipRegSharedTiledMatmulKernel(const double * A,
   // Register accumulators
   double Creg[RegTileM * RegTileN];
   #pragma unroll
-  for (int i = 0; i < RegTileM * RegTileN; ++i) { Creg[i] = 0.0; }
+  for (int i = 0; i < RegTileM * RegTileN; ++i) Creg[i] = 0.0;
 
   // Linear thread id for cooperative loads
   const int threadsX = BlockTileN / RegTileN;
@@ -203,37 +183,22 @@ extern "C" __global__ void hipRegSharedTiledMatmulKernel(const double * A,
     }
   }
 }
-)cpp";
 
-static auto getRegSharedTiledMatMulKernel(int N)
-{
-  inja::json data = {
-    {"include", std::string{kDeviceInclude}},
-    {"N", N},
-    {"BlockTileM", BlockTileM},
-    {"KTile", KTile},
-    {"BlockTileN", BlockTileN},
-    {"RegTileM", RegTileM},
-    {"RegTileN", RegTileN}
-  };
-  auto KernelStr = inja::render(std::string{StrHipRegSharedTiledMatmulKernelTemplate}, data);
-  auto JitMod = std::make_unique<CppJitModule>("hip", KernelStr);
-  auto Kernel = JitMod->getKernel<void(const double *, const double *, double *)>("hipRegSharedTiledMatmulKernel");
-  return std::make_pair(std::move(JitMod), Kernel);
+static inline void hipRegSharedTiledMatmulLaunch(const double *A,
+                                                 const double *B,
+                                                 double *C,
+                                                 int N) {
+  dim3 Block(BlockTileN / RegTileN, BlockTileM / RegTileM, 1);
+  dim3 Grid(N / BlockTileN, N / BlockTileM, 1);
+  #ifdef ENABLE_PROTEUS
+  hipRegSharedTiledMatmulKernel<<<Grid, Block>>>(A, B, C, N);
+  #else
+  size_t SmemBytes = (BlockTileM * KTile + KTile * BlockTileN) * sizeof(double);
+  hipRegSharedTiledMatmulKernel<<<Grid, Block, SmemBytes>>>(A, B, C, N);
+  #endif
 }
 
-static auto getNontiledMatMulKernel(int N)
-{
-  inja::json data = {
-    {"include", std::string{kDeviceInclude}},
-    {"N", N}
-  };
-  auto KernelStr = inja::render(std::string{StrHipNontiledMatmulKernelTemplate}, data);
-  auto JitMod = std::make_unique<CppJitModule>("hip", KernelStr);
-  auto Kernel = JitMod->getKernel<void(const double *, const double *, double *)>("hipNontiledMatmulKernel");
-  return std::make_pair(std::move(JitMod), Kernel);
-}
-
+// Verification helper to mirror pj-dsl structure
 static bool verify(double *C, int N) {
   for (int I = 0; I < N; I++) {
     for (int J = 0; J < N; J++) {
@@ -341,19 +306,14 @@ int main(int argc, char** argv) {
 
   // Kernel execution based on type
   if (KernelType == "hip_regtiled") {
-    auto [JitMod, Kernel] = getRegSharedTiledMatMulKernel(N);
-    Kernel.launch({static_cast<unsigned int>(N / BlockTileN), static_cast<unsigned int>(N / BlockTileM), 1},
-                  {static_cast<unsigned int>(BlockTileN / RegTileN), static_cast<unsigned int>(BlockTileM / RegTileM), 1},
-                  0, nullptr, AD, BD, CD);
+    hipRegSharedTiledMatmulLaunch(AD, BD, CD, N);
     gpuErrCheck(gpuDeviceSynchronize());
 
     // Timed trials
     double TotalMs = 0.0;
     auto Start = std::chrono::high_resolution_clock::now();
     for (int T = 0; T < NumTrials; ++T) {
-      Kernel.launch({static_cast<unsigned int>(N / BlockTileN), static_cast<unsigned int>(N / BlockTileM), 1},
-                    {static_cast<unsigned int>(BlockTileN / RegTileN), static_cast<unsigned int>(BlockTileM / RegTileM), 1},
-                    0, nullptr, AD, BD, CD);
+      hipRegSharedTiledMatmulLaunch(AD, BD, CD, N);
     }
     gpuErrCheck(gpuDeviceSynchronize());
     auto End = std::chrono::high_resolution_clock::now();
@@ -365,20 +325,14 @@ int main(int argc, char** argv) {
     std::cerr << "Average over " << NumTrials << " trials: " << AvgMs << " ms" << '\n';
 
   } else if (KernelType == "hip") {
-    auto [JitModNT, KernelNT] = getNontiledMatMulKernel(N);
-    unsigned int blockX = static_cast<unsigned int>(MatmulTileSize);
-    unsigned int blockY = static_cast<unsigned int>(MatmulTileSize);
-    unsigned int gridX = static_cast<unsigned int>((N + blockX - 1) / blockX);
-    unsigned int gridY = static_cast<unsigned int>((N + blockY - 1) / blockY);
-
-    KernelNT.launch({gridX, gridY, 1}, {blockX, blockY, 1}, 0, nullptr, AD, BD, CD);
+    hipNontiledMatmulLaunch(AD, BD, CD, N);
     gpuErrCheck(gpuDeviceSynchronize());
 
     // Timed trials
     double TotalMs = 0.0;
     auto Start = std::chrono::high_resolution_clock::now();
     for (int T = 0; T < NumTrials; ++T) {
-      KernelNT.launch({gridX, gridY, 1}, {blockX, blockY, 1}, 0, nullptr, AD, BD, CD);
+      hipNontiledMatmulLaunch(AD, BD, CD, N);
     }
     gpuErrCheck(gpuDeviceSynchronize());
     auto End = std::chrono::high_resolution_clock::now();

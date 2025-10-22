@@ -33,96 +33,18 @@
  *
  */
 
-#include <assert.h>
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <assert.h>
+#include <iomanip>
 #include <unistd.h>
-
 #include <algorithm>
 #include <chrono>
 #include <iostream>
-#include <iomanip>
-#include <string>
-#include <string_view>
 #include <vector>
-
-#include <proteus/CppJitModule.hpp>
+#include <hip/hip_runtime.h>
 
 #include "../../../gpu/gpu_common.h"
-#include "inja/inja.h"
-
-using namespace proteus;
-
-constexpr const char *kDeviceInclude = "#include <hip/hip_runtime.h>";
-
-constexpr std::string_view StrBezierKernelTemplate = R"cpp(
-{{ include }}
-#include <math.h>
-
-__device__ inline float BezierBlend(int k, float mu, int n) {
-  int nn = n;
-  int kn = k;
-  int nkn = n - k;
-  float blend = 1.0f;
-  while (nn >= 1) {
-    blend *= static_cast<float>(nn);
-    --nn;
-    if (kn > 1) {
-      blend /= static_cast<float>(kn);
-      --kn;
-    }
-    if (nkn > 1) {
-      blend /= static_cast<float>(nkn);
-      --nkn;
-    }
-  }
-  if (k > 0) {
-    blend *= powf(mu, static_cast<float>(k));
-  }
-  if (n - k > 0) {
-    blend *= powf(static_cast<float>(1) - mu, static_cast<float>(n - k));
-  }
-  return blend;
-}
-
-extern "C" __global__
-void BezierGPU(const float *__restrict__ inp,
-                                     float *__restrict__ outp) {
-  constexpr int NI = {{ in_size_i }};
-  constexpr int NJ = {{ in_size_j }};
-  constexpr int RESOLUTIONI = {{ out_size_i }};
-  constexpr int RESOLUTIONJ = {{ out_size_j }};
-
-  int i = blockDim.x * blockIdx.x + threadIdx.x;
-  if (i > RESOLUTIONI) {
-    return;
-  }
-
-  float mui = i / static_cast<float>(RESOLUTIONI - 1);
-  for (int j = 0; j < RESOLUTIONJ; ++j) {
-    float muj = j / static_cast<float>(RESOLUTIONJ - 1);
-    float out_x = 0.0f;
-    float out_y = 0.0f;
-    float out_z = 0.0f;
-    for (int ki = 0; ki <= NI; ++ki) {
-      float bi = BezierBlend(ki, mui, NI);
-      for (int kj = 0; kj <= NJ; ++kj) {
-        float bj = BezierBlend(kj, muj, NJ);
-        int idx = (ki * (NJ + 1) + kj) * 3;
-        float coeff = bi * bj;
-        out_x += inp[idx + 0] * coeff;
-        out_y += inp[idx + 1] * coeff;
-        out_z += inp[idx + 2] * coeff;
-      }
-    }
-    int out_idx = (i * RESOLUTIONJ + j) * 3;
-    outp[out_idx + 0] = out_x;
-    outp[out_idx + 1] = out_y;
-    outp[out_idx + 2] = out_z;
-  }
-}
-)cpp";
 
 #define divceil(n, m) (((n)-1) / (m) + 1)
 
@@ -140,7 +62,7 @@ struct Params {
 
   Params(int argc, char **argv) {
     work_group_size = 256;
-    file_name = "../../../hecbench/data/bezier-surface/control.txt";
+    file_name = "../../data/bezier-surface/control.txt";
     in_size_i = in_size_j = 3;
     out_size_i = out_size_j = 300;
     num_trials = 5;
@@ -151,6 +73,7 @@ struct Params {
         case 'h':
           usage();
           exit(0);
+          break;
         case 'g': work_group_size = atoi(optarg); break;
         case 't': num_trials = atoi(optarg); break;
         case 'f': file_name = optarg; break;
@@ -158,9 +81,9 @@ struct Params {
         case 'n': out_size_i = out_size_j = atoi(optarg); break;
         case 'v': verify = true; break;
         default:
-          fprintf(stderr, "\nUnrecognized option!\n");
-          usage();
-          exit(0);
+            fprintf(stderr, "\nUnrecognized option!\n");
+            usage();
+            exit(0);
       }
     }
   }
@@ -177,7 +100,7 @@ struct Params {
         "\n"
         "\n"
         "\nBenchmark-specific options:"
-        "\n    -f <F>    name of input file with control points (default=../../../hecbench/data/bezier-surface/control.txt)"
+        "\n    -f <F>    name of input file with control points (default=input/control.txt)"
         "\n    -m <N>    input size in both dimensions (default=3)"
         "\n    -n <R>    output resolution in both dimensions (default=300)"
         "\n");
@@ -195,7 +118,8 @@ void read_input(float *in, const Params &p) {
     exit(-1);
   } else {
     printf("Read data from file %s\n", p.file_name);
-  }
+  } 
+
 
   // Store points from input file to array
   int k = 0, ic = 0;
@@ -241,9 +165,11 @@ inline int compare_output(const float *outp, const float *outpCPU,
   return 0;
 }
 
-float BezierBlend(int k, float mu, int n) {
+// BezierBlend (http://paulbourke.net/geometry/bezier/)
+__host__ __device__
+inline float BezierBlend(int k, float mu, int n) {
   int nn, kn, nkn;
-  float blend = 1.0f;
+  float   blend = 1.0f;
   nn        = n;
   kn        = k;
   nkn       = n - k;
@@ -262,8 +188,8 @@ float BezierBlend(int k, float mu, int n) {
   if(k > 0)
     blend *= powf(mu, static_cast<float>(k));
   if(n - k > 0)
-    blend *= powf(static_cast<float>(1) - mu, static_cast<float>(n - k));
-  return blend;
+    blend *= powf(1 - mu, static_cast<float>(n - k));
+  return (blend);
 }
 
 // Sequential implementation for comparison purposes
@@ -296,6 +222,40 @@ void BezierCPU(const float *inp,
   }
 }
 
+#ifdef PROTEUS_JIT
+__attribute__((annotate("jit",  3, 4, 5, 6)))
+#endif
+__global__
+void BezierGPU(const float *inp,
+               float *outp,
+               const int NI, const int NJ, const int RESOLUTIONI, const int RESOLUTIONJ) {
+  int i = blockDim.x * blockIdx.x + threadIdx.x;
+  if (i > RESOLUTIONI) return;
+
+  float mui = i / static_cast<float>(RESOLUTIONI - 1);
+  for(int j = 0; j < RESOLUTIONJ; j++) {
+    float muj = j / static_cast<float>(RESOLUTIONJ - 1);
+    float out_x = 0.0f;
+    float out_y = 0.0f;
+    float out_z = 0.0f;
+    for(int ki = 0; ki <= NI; ki++) {
+      float bi = BezierBlend(ki, mui, NI);
+      for(int kj = 0; kj <= NJ; kj++) {
+        float bj = BezierBlend(kj, muj, NJ);
+        int idx = (ki * (NJ + 1) + kj) * 3;
+        float coeff = bi * bj;
+        out_x += inp[idx + 0] * coeff;
+        out_y += inp[idx + 1] * coeff;
+        out_z += inp[idx + 2] * coeff;
+      }
+    }
+    int out_idx = (i * RESOLUTIONJ + j) * 3;
+    outp[out_idx + 0] = out_x;
+    outp[out_idx + 1] = out_y;
+    outp[out_idx + 2] = out_z;
+  }
+}
+
 void run(float *in,
          int in_size_i, int in_size_j, int out_size_i, int out_size_j, const Params &p) {
 
@@ -314,35 +274,13 @@ void run(float *in,
     std::cout << "host execution time: " << std::fixed << std::setprecision(4) << time << "ms" << std::endl;
   }
 
-  // Device run - kernel creation and compilation (done once)
+  // Device run - trial loop
   size_t in_size   = static_cast<size_t>(in_size_i + 1) * static_cast<size_t>(in_size_j + 1) * 3 * sizeof(float);
   size_t out_size  = out_elems * 3 * sizeof(float);
 
-  auto kernel_create_start = std::chrono::steady_clock::now();
-  inja::json data = {
-      {"include", std::string{kDeviceInclude}},
-      {"in_size_i", in_size_i},
-      {"in_size_j", in_size_j},
-      {"out_size_i", out_size_i},
-      {"out_size_j", out_size_j}
-  };
-
-  const std::string kernelSource = inja::render(std::string{StrBezierKernelTemplate}, data);
-  CppJitModule module{TARGET, kernelSource};
-  auto kernel_create_end = std::chrono::steady_clock::now();
-  module.compile();
-  using KernelSig = void(const float *, float *);
-  auto Kernel = module.getKernel<KernelSig>("BezierGPU");
-  auto compile_end = std::chrono::steady_clock::now();
-  auto compile_time = std::chrono::duration<double, std::milli>(compile_end - kernel_create_end).count();
-  auto kernel_create_time = std::chrono::duration<double, std::milli>(kernel_create_end - kernel_create_start).count();
-  std::cout << "kernel creation time: " << std::fixed << std::setprecision(4) << kernel_create_time << "ms" << std::endl;
-  std::cout << "kernel compilation time: " << std::fixed << std::setprecision(4) << compile_time << "ms" << std::endl;
-
-  // Trial loop
   std::vector<double> trial_times;
   dim3 block(p.work_group_size);
-  dim3 grid(divceil(out_size_i, p.work_group_size));
+  dim3 grid((out_size_i + p.work_group_size - 1) / p.work_group_size);
 
   for (int trial = 0; trial < p.num_trials; trial++) {
     float *d_in;
@@ -351,26 +289,26 @@ void run(float *in,
     auto trial_start = std::chrono::steady_clock::now();
 
     // Allocate device memory
-    gpuErrCheck(gpuMalloc((void**)&d_in, in_size));
-    gpuErrCheck(gpuMalloc((void**)&d_out, out_size));
+    gpuErrCheck(hipMalloc((void**)&d_in, in_size));
+    gpuErrCheck(hipMalloc((void**)&d_out, out_size));
 
     // Transfer data to device
-    gpuErrCheck(gpuMemcpy(d_in, in, in_size, gpuMemcpyHostToDevice));
+    gpuErrCheck(hipMemcpy(d_in, in, in_size, hipMemcpyHostToDevice));
 
     // Launch kernel
-    gpuErrCheck(gpuDeviceSynchronize());
+    gpuErrCheck(hipDeviceSynchronize());
     auto kstart = std::chrono::steady_clock::now();
 
-    Kernel.launch({grid.x, grid.y, grid.z}, {block.x, block.y, block.z}, 0, nullptr,
-                  d_in,
-                  d_out);
+    hipLaunchKernelGGL(BezierGPU, grid, block , 0, 0,
+                       d_in, d_out,
+                       in_size_i, in_size_j, out_size_i, out_size_j);
 
-    gpuErrCheck(gpuDeviceSynchronize());
+    gpuErrCheck(hipDeviceSynchronize());
     auto kend = std::chrono::steady_clock::now();
     auto ktime = std::chrono::duration<double, std::milli>(kend - kstart).count();
 
     // Transfer data back to host
-    gpuErrCheck(gpuMemcpy(gpu_out, d_out, out_size, gpuMemcpyDeviceToHost));
+    gpuErrCheck(hipMemcpy(gpu_out, d_out, out_size, hipMemcpyDeviceToHost));
 
     auto trial_end = std::chrono::steady_clock::now();
     auto trial_time = std::chrono::duration<double, std::milli>(trial_end - trial_start).count();
@@ -379,8 +317,8 @@ void run(float *in,
     std::cout << "Trial " << (trial + 1) << " - kernel execution time: " << std::fixed << std::setprecision(4) << ktime << "ms, total time: " << trial_time << "ms" << std::endl;
 
     // Free device memory
-    gpuErrCheck(gpuFree(d_in));
-    gpuErrCheck(gpuFree(d_out));
+    gpuErrCheck(hipFree(d_in));
+    gpuErrCheck(hipFree(d_out));
   }
 
   // Calculate and report statistics
@@ -418,12 +356,15 @@ void run(float *in,
 int main(int argc, char **argv) {
 
   const Params p(argc, argv);
-  int num_points = (p.in_size_i + 1) * (p.in_size_j + 1);
-  size_t in_size   = static_cast<size_t>(num_points) * 3 * sizeof(float);
+  int num_points   = (p.in_size_i + 1) * (p.in_size_j + 1);
+  size_t in_size_bytes   = static_cast<size_t>(num_points) * 3 * sizeof(float);
+  //int out_size  = p.out_size_i * p.out_size_j * sizeof(XYZ);
 
-  float* in = (float *)malloc(in_size);
+  // load data into h_in
+  float* in = (float *)malloc(in_size_bytes);
   read_input(in, p);
 
+  // run the app on the cpu and gpu
   run(in, p.in_size_i, p.in_size_j, p.out_size_i, p.out_size_j, p);
 
   free(in);

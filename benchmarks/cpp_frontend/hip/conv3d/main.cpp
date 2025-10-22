@@ -17,7 +17,7 @@
 #include <hip/hip_runtime.h>
 #include <proteus/CppJitModule.hpp>
 #include "inja/inja.h"
-#include "../../gpu/gpu_common.h"
+#include "../../../gpu/gpu_common.h"
 
 using namespace proteus;
 

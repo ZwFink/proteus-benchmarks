@@ -3,21 +3,12 @@
 #include <math.h>
 #include <chrono>
 #include <random>
-#include <memory>
-#include <string>
-#include <string_view>
 #include <hip/hip_runtime.h>
-#include <proteus/CppJitModule.hpp>
-#include "inja/inja.h"
+#include "kernels.h"
 #include "../../../gpu/gpu_common.h"
 
-using namespace proteus;
-
-#define TARGET "hip"
-#define INCLUDE "#include <hip/hip_runtime.h>"
-
 float* attention_host(const float* key, const float* value, const float* query,
-  const int n, const int d)
+  const int n, const int d) 
 {
 // intermediate
 float* dot_product = (float*) malloc (n * sizeof(float));
@@ -51,89 +42,8 @@ free(score);
 return output;
 }
 
-// Kernel template for attention_kernel1
-constexpr std::string_view StrAttentionKernel1Template = INCLUDE R"cpp(
-extern "C" __global__ void attention_kernel1(
-    const float* __restrict__ key,
-    const float* __restrict__ query,
-    float* __restrict__ dot_product,
-    float* __restrict__ exp_sum)
-{
-  constexpr int n = {{ n }};
-  constexpr int d = {{ d }};
-  int i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < n) {
-    float sum = 0;
-    for (int j = 0; j < d; j++)
-      sum += key[i * d + j] * query[j];
-    dot_product[i] = sum;
-    atomicAdd(exp_sum, __expf(sum));
-  }
-}
-)cpp";
 
-// Kernel template for attention_kernel2
-constexpr std::string_view StrAttentionKernel2Template = INCLUDE R"cpp(
-extern "C" __global__ void attention_kernel2(
-    const float* __restrict__ exp_sum,
-    const float* __restrict__ dot_product,
-    float* __restrict__ score)
-{
-  constexpr int n = {{ n }};
-  int i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < n)
-    score[i] = __expf(dot_product[i]) / exp_sum[0];
-}
-)cpp";
 
-// Kernel template for attention_kernel3
-constexpr std::string_view StrAttentionKernel3Template = INCLUDE R"cpp(
-extern "C" __global__ void attention_kernel3(
-    const float* __restrict__ score,
-    const float* __restrict__ value,
-    float* __restrict__ output)
-{
-  constexpr int n = {{ n }};
-  constexpr int d = {{ d }};
-  int j = blockIdx.x * blockDim.x + threadIdx.x;
-  if (j < d) {
-    float sum = 0;
-    for (int i = 0; i < n; i++)
-      sum += score[i] * value[i * d + j];
-    output[j] = sum;
-  }
-}
-)cpp";
-
-// Getter function for attention_kernel1
-static auto getAttentionKernel1(int n, int d)
-{
-  inja::json data = {{"n", n}, {"d", d}};
-  auto kernelSource = inja::render(std::string{StrAttentionKernel1Template}, data);
-  auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
-  auto Kernel = JitMod->getKernel<void(const float *, const float *, float *, float *)>("attention_kernel1");
-  return std::make_pair(std::move(JitMod), Kernel);
-}
-
-// Getter function for attention_kernel2
-static auto getAttentionKernel2(int n)
-{
-  inja::json data = {{"n", n}};
-  auto kernelSource = inja::render(std::string{StrAttentionKernel2Template}, data);
-  auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
-  auto Kernel = JitMod->getKernel<void(const float *, const float *, float *)>("attention_kernel2");
-  return std::make_pair(std::move(JitMod), Kernel);
-}
-
-// Getter function for attention_kernel3
-static auto getAttentionKernel3(int n, int d)
-{
-  inja::json data = {{"n", n}, {"d", d}};
-  auto kernelSource = inja::render(std::string{StrAttentionKernel3Template}, data);
-  auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
-  auto Kernel = JitMod->getKernel<void(const float *, const float *, float *)>("attention_kernel3");
-  return std::make_pair(std::move(JitMod), Kernel);
-}
 
 float* attention_device(const float* key, const float* value, const float* query,
                         const int n, const int d, const int repeat, const int verify)
@@ -168,26 +78,15 @@ float* attention_device(const float* key, const float* value, const float* query
 
   gpuErrCheck(hipDeviceSynchronize());
 
-  // Get kernels with specialized n and d values
-  auto [JitMod1, Kernel1] = getAttentionKernel1(n, d);
-  auto [JitMod2, Kernel2] = getAttentionKernel2(n);
-  auto [JitMod3, Kernel3] = getAttentionKernel3(n, d);
-
   auto start = std::chrono::steady_clock::now();
 
   for (int k = 0; k < repeat; k++) {
     if(verify) {
       gpuErrCheck(hipMemset(d_exp_sum, 0, 4));
     }
-    Kernel1.launch({static_cast<unsigned int>((n+255)/256), 1, 1},
-                   {256, 1, 1},
-                   0, nullptr, d_key, d_query, d_dot_product, d_exp_sum);
-    Kernel2.launch({static_cast<unsigned int>((n+255)/256), 1, 1},
-                   {256, 1, 1},
-                   0, nullptr, d_exp_sum, d_dot_product, d_score);
-    Kernel3.launch({static_cast<unsigned int>((d+255)/256), 1, 1},
-                   {256, 1, 1},
-                   0, nullptr, d_score, d_value, d_output);
+    attention_kernel1<<<(n+255)/256, 256>>>(d_key, d_query, d_dot_product, d_exp_sum, n, d);
+    attention_kernel2<<<(n+255)/256, 256>>>(d_exp_sum, d_dot_product, d_score, n);
+    attention_kernel3<<<(d+255)/256, 256>>>(d_score, d_value, d_output, n, d);
   }
 
   gpuErrCheck(hipDeviceSynchronize());
