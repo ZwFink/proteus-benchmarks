@@ -144,6 +144,12 @@ exe = "wsm5-proteus.x"
 default = "10"
 
 [hecbench.3mm]
+[hecbench.3mm.amd.aot]
+path = "benchmarks/hecbench/hip/3mm"
+exe = "3mm-aot.x"
+[hecbench.3mm.amd.proteus]
+path = "benchmarks/hecbench/hip/3mm"
+exe = "3mm-proteus.x"
 [hecbench.3mm.amd.cpp]
 path = "benchmarks/cpp_frontend/hip/3mm"
 exe = "3mm-cpp-proteus.x"
@@ -157,6 +163,12 @@ exe = "3mm-proteus.x"
 default = "--no-verify --N 8192 --kernel hip_regtiled"
 
 [hecbench.attention]
+[hecbench.attention.amd.aot]
+path = "benchmarks/hecbench/hip/attention"
+exe = "attention-aot.x"
+[hecbench.attention.amd.proteus]
+path = "benchmarks/hecbench/hip/attention"
+exe = "attention-proteus.x"
 [hecbench.attention.amd.cpp]
 path = "benchmarks/cpp_frontend/hip/attention"
 exe = "attention-cpp-frontend-proteus.x"
@@ -170,6 +182,12 @@ exe = "attention-proteus.x"
 default = "65536 2048 100"
 
 [hecbench.gemm]
+[hecbench.gemm.amd.aot]
+path = "benchmarks/hecbench/hip/gemm"
+exe = "gemm-aot.x"
+[hecbench.gemm.amd.proteus]
+path = "benchmarks/hecbench/hip/gemm"
+exe = "gemm-proteus.x"
 [hecbench.gemm.amd.cpp]
 path = "benchmarks/cpp_frontend/hip/gemm"
 exe = "gemm-cpp-proteus.x"
@@ -183,6 +201,12 @@ exe = "gemm-proteus.x"
 default = "--no-verify --N 8192 --kernel hip_regtiled"
 
 [hecbench.conv3d]
+[hecbench.conv3d.amd.aot]
+path = "benchmarks/hecbench/hip/conv3d"
+exe = "conv3d-aot.x"
+[hecbench.conv3d.amd.proteus]
+path = "benchmarks/hecbench/hip/conv3d"
+exe = "conv3d-proteus.x"
 [hecbench.conv3d.amd.cpp]
 path = "benchmarks/cpp_frontend/hip/conv3d"
 exe = "conv3d-cpp-frontend-proteus.x"
@@ -196,6 +220,12 @@ exe = "conv3d-proteus.x"
 default = "32 96 256 26 26 5 100"
 
 [hecbench.bezier-surface]
+[hecbench.bezier-surface.amd.aot]
+path = "benchmarks/hecbench/hip/bezier-surface"
+exe = "bezier-surface-aot.x"
+[hecbench.bezier-surface.amd.proteus]
+path = "benchmarks/hecbench/hip/bezier-surface"
+exe = "bezier-surface-proteus.x"
 [hecbench.bezier-surface.amd.cpp]
 path = "benchmarks/cpp_frontend/hip/bezier-surface"
 exe = "bezier-surface-cpp-frontend-proteus.x"
@@ -209,6 +239,12 @@ exe = "bezier-surface-proteus.x"
 default = "-n 8192"
 
 [hecbench.minibude]
+[hecbench.minibude.amd.aot]
+path = "benchmarks/hecbench/hip/minibude"
+exe = "minibude-aot.x"
+[hecbench.minibude.amd.proteus]
+path = "benchmarks/hecbench/hip/minibude"
+exe = "minibude-proteus.x"
 [hecbench.minibude.amd.cpp]
 path = "benchmarks/cpp_frontend/hip/minibude"
 exe = "minibude-cpp-frontend-proteus.x"
@@ -222,6 +258,12 @@ exe = "minibude-proteus.x"
 default = "--deck ../../../hecbench/data/minibude/bm2 --wgsize 256 --iterations 5"
 
 [hecbench.floyd-warshall]
+[hecbench.floyd-warshall.amd.aot]
+path = "benchmarks/hecbench/hip/floyd-warshall"
+exe = "floyd-warshall-aot.x"
+[hecbench.floyd-warshall.amd.proteus]
+path = "benchmarks/hecbench/hip/floyd-warshall"
+exe = "floyd-warshall-proteus.x"
 [hecbench.floyd-warshall.amd.cpp]
 path = "benchmarks/cpp_frontend/hip/floyd-warshall"
 exe = "floyd-warshall-cpp-frontend-proteus.x"
@@ -232,4 +274,4 @@ exe = "floyd-warshall-proteus.x"
 path = "benchmarks/hecbench/dsl/floyd-warshall"
 exe = "floyd-warshall-proteus.x"
 [hecbench.floyd-warshall.inputs]
-default = "8192 10 16"
+default = "8192 10 16 0"
