@@ -9,20 +9,49 @@
 #include <cstring>
 #include <memory>
 
-#include <hip/hip_runtime.h>
+#include "../../../gpu/gpu_common.h"
+
+#if PROTEUS_ENABLE_CUDA
+#include <curand.h>
+using RandGenerator = curandGenerator_t;
+using RandStatus = curandStatus_t;
+constexpr curandRngType_t RAND_RNG_TYPE = CURAND_RNG_PSEUDO_DEFAULT;
+constexpr RandStatus RAND_STATUS_SUCCESS = CURAND_STATUS_SUCCESS;
+inline RandStatus randCreate(RandGenerator *gen) { return curandCreateGenerator(gen, RAND_RNG_TYPE); }
+inline RandStatus randSetSeed(RandGenerator gen, unsigned long long seed) {
+  return curandSetPseudoRandomGeneratorSeed(gen, seed);
+}
+inline RandStatus randGenerate(RandGenerator gen, unsigned int *data, size_t count) {
+  return curandGenerate(gen, data, count);
+}
+inline RandStatus randDestroy(RandGenerator gen) { return curandDestroyGenerator(gen); }
+#elif PROTEUS_ENABLE_HIP
 #include <hiprand/hiprand.h>
-
-#if !defined(PROTEUS_ENABLE_HIP) && !defined(PROTEUS_ENABLE_CUDA)
-#define PROTEUS_ENABLE_HIP 1
-#endif
-
-#if PROTEUS_ENABLE_HIP
-#define TARGET "hip"
-#elif PROTEUS_ENABLE_CUDA
-#define TARGET "cuda"
+using RandGenerator = hiprandGenerator_t;
+using RandStatus = hiprandStatus_t;
+constexpr hiprandRngType_t RAND_RNG_TYPE = HIPRAND_RNG_PSEUDO_DEFAULT;
+constexpr RandStatus RAND_STATUS_SUCCESS = HIPRAND_STATUS_SUCCESS;
+inline RandStatus randCreate(RandGenerator *gen) { return hiprandCreateGenerator(gen, RAND_RNG_TYPE); }
+inline RandStatus randSetSeed(RandGenerator gen, unsigned long long seed) {
+  return hiprandSetPseudoRandomGeneratorSeed(gen, seed);
+}
+inline RandStatus randGenerate(RandGenerator gen, unsigned int *data, size_t count) {
+  return hiprandGenerate(gen, data, count);
+}
+inline RandStatus randDestroy(RandGenerator gen) { return hiprandDestroyGenerator(gen); }
 #else
 #error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA defined"
 #endif
+
+inline void randCheck(RandStatus status, const char *expr, const char *file, int line) {
+  if (status != RAND_STATUS_SUCCESS) {
+    std::fprintf(stderr, "Random generator error (%d) at %s:%d while executing %s\n",
+                 static_cast<int>(status), file, line, expr);
+    std::abort();
+  }
+}
+
+#define RAND_CALL(expr) randCheck((expr), #expr, __FILE__, __LINE__)
 
 constexpr unsigned int MAXDISTANCE = 200;
 
@@ -159,32 +188,33 @@ int main(int argc, char **argv) {
 
   unsigned int *pathDistanceBuffer = nullptr;
   unsigned int *pathBuffer = nullptr;
-  (void)hipMalloc(reinterpret_cast<void **>(&pathDistanceBuffer), matrixSizeBytes);
-  (void)hipMalloc(reinterpret_cast<void **>(&pathBuffer), matrixSizeBytes);
+  gpuErrCheck(gpuMalloc(reinterpret_cast<void **>(&pathDistanceBuffer), matrixSizeBytes));
+  gpuErrCheck(gpuMalloc(reinterpret_cast<void **>(&pathBuffer), matrixSizeBytes));
 
   // JIT compile kernel specialized for this numNodes
   auto [J, KernelHandle] = createJitModuleSpecial(static_cast<unsigned int>(numNodes));
   J->compile();
 
-  // hipRAND generator
-  hiprandGenerator_t gen;
-  (void)hiprandCreateGenerator(&gen, HIPRAND_RNG_PSEUDO_DEFAULT);
-  (void)hiprandSetPseudoRandomGeneratorSeed(gen, 1234ULL);
+  // GPU RNG generator
+  RandGenerator gen;
+  RAND_CALL(randCreate(&gen));
+  RAND_CALL(randSetSeed(gen, 1234ULL));
 
   float total_time_ns = 0.0f;
 
   for (unsigned int n = 0; n < numIterations; n++) {
-    // Generate matrix on device using hipRAND
-    (void)hiprandGenerate(gen, pathDistanceBuffer, numNodes * numNodes);
+    // Generate matrix on device using GPU RNG
+    RAND_CALL(randGenerate(gen, pathDistanceBuffer, static_cast<size_t>(numNodes) * numNodes));
     // Map to [0, MAXDISTANCE] and zero diagonal
     initRandomMatrix2D<<<dim3(gridX, gridY, 1), dim3(blockSize, blockSize, 1)>>>(pathDistanceBuffer, numNodes);
 
     if (do_verify && n == numIterations - 1) {
       // Save initial matrix for CPU reference on last iteration
-      (void)hipMemcpy(verificationPathDistanceMatrix, pathDistanceBuffer, matrixSizeBytes, hipMemcpyDeviceToHost);
+      gpuErrCheck(gpuMemcpy(verificationPathDistanceMatrix, pathDistanceBuffer, matrixSizeBytes,
+                            gpuMemcpyDeviceToHost));
     }
 
-    (void)hipDeviceSynchronize();
+    gpuErrCheck(gpuDeviceSynchronize());
     auto start = std::chrono::steady_clock::now();
 
     for (unsigned int i = 0; i < numNodes; i++) {
@@ -192,22 +222,22 @@ int main(int argc, char **argv) {
                                 pathDistanceBuffer, pathBuffer, static_cast<unsigned>(numNodes), static_cast<unsigned>(i));
     }
 
-    (void)hipDeviceSynchronize();
+    gpuErrCheck(gpuDeviceSynchronize());
     auto end = std::chrono::steady_clock::now();
     auto time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     total_time_ns += static_cast<float>(time_ns);
   }
 
-  (void)hiprandDestroyGenerator(gen);
+  RAND_CALL(randDestroy(gen));
 
   std::printf("Average kernel execution time %f (s)\n", (total_time_ns * 1e-9f) / static_cast<float>(numIterations));
 
   if (do_verify) {
-    (void)hipMemcpy(pathDistanceMatrix, pathDistanceBuffer, matrixSizeBytes, hipMemcpyDeviceToHost);
+    gpuErrCheck(gpuMemcpy(pathDistanceMatrix, pathDistanceBuffer, matrixSizeBytes, gpuMemcpyDeviceToHost));
   }
 
-  (void)hipFree(pathDistanceBuffer);
-  (void)hipFree(pathBuffer);
+  gpuErrCheck(gpuFree(pathDistanceBuffer));
+  gpuErrCheck(gpuFree(pathBuffer));
 
   // verify
   if (do_verify) {

@@ -1,24 +1,17 @@
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitFrontend.hpp>
 
-#include <hip/hip_runtime.h>
-
 #include <chrono>
 #include <iostream>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+// Common HIP/CUDA portability helpers
+#include "../../../gpu/gpu_common.h"
+
 using namespace proteus;
 using namespace builtins::gpu;
-
-#if PROTEUS_ENABLE_HIP
-#define TARGET "hip"
-#elif PROTEUS_ENABLE_CUDA
-#define TARGET "cuda"
-#else
-#error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA defined"
-#endif
 
 
 typedef enum {
@@ -125,18 +118,18 @@ int main(int argc, char *argv[]) {
   }
 
   float *d_m, *d_v, *d_g, *d_p;
-
-  hipMalloc((void **)&d_m, size_bytes);
-  hipMemcpy(d_m, m, size_bytes, hipMemcpyHostToDevice);
-
-  hipMalloc((void **)&d_v, size_bytes);
-  hipMemcpy(d_v, v, size_bytes, hipMemcpyHostToDevice);
-
-  hipMalloc((void **)&d_g, size_bytes);
-  hipMemcpy(d_g, g, size_bytes, hipMemcpyHostToDevice);
-
-  hipMalloc((void **)&d_p, size_bytes);
-  hipMemcpy(d_p, p, size_bytes, hipMemcpyHostToDevice);
+  
+  gpuMalloc((void **)&d_m, size_bytes);
+  gpuMemcpy(d_m, m, size_bytes, gpuMemcpyHostToDevice);
+  
+  gpuMalloc((void **)&d_v, size_bytes);
+  gpuMemcpy(d_v, v, size_bytes, gpuMemcpyHostToDevice);
+  
+  gpuMalloc((void **)&d_g, size_bytes);
+  gpuMemcpy(d_g, g, size_bytes, gpuMemcpyHostToDevice);
+  
+  gpuMalloc((void **)&d_p, size_bytes);
+  gpuMemcpy(d_p, p, size_bytes, gpuMemcpyHostToDevice);
 
   // Arbitrary constants
   const float step_size = 1e-3f;
@@ -157,8 +150,8 @@ int main(int argc, char *argv[]) {
                              time_step, vector_size, mode, decay);
 
   J->compile();
-
-  hipDeviceSynchronize();
+  
+  gpuDeviceSynchronize();
 
 
   auto start = std::chrono::steady_clock::now();
@@ -173,19 +166,19 @@ int main(int argc, char *argv[]) {
                                     d_p, d_m, d_v, d_g);
   }
 
-  hipDeviceSynchronize();
+  gpuDeviceSynchronize();
   auto end = std::chrono::steady_clock::now();
   auto time =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average kernel execution time %f (ms)\n", time * 1e-6f / repeat);
-
-  hipMemcpy(p, d_p, size_bytes, hipMemcpyDeviceToHost);
-
-
-  hipFree(d_p);
-  hipFree(d_m);
-  hipFree(d_v);
-  hipFree(d_g);
+  
+  gpuMemcpy(p, d_p, size_bytes, gpuMemcpyDeviceToHost);
+  
+  
+  gpuFree(d_p);
+  gpuFree(d_m);
+  gpuFree(d_v);
+  gpuFree(d_g);
 
   free(p);
   free(m);

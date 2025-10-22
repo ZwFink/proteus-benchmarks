@@ -646,7 +646,7 @@ def main():
     def build_and_run_experiments(experiments):
         # Build, run, and collect results for each experiment and profiling mode.
         for builder in builders:
-            builder.build(args.exemode in ("proteus", "cpp"))
+            builder.build(args.exemode in ("proteus", "cpp", "dsl"))
             print(
                 "=> Built",
                 builder.build_path,

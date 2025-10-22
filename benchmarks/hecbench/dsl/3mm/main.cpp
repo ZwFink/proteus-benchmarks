@@ -1,6 +1,7 @@
 #include <proteus/JitFrontend.hpp>
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitInterface.hpp>
+#include "../../../gpu/gpu_common.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -13,26 +14,6 @@
 
 using namespace proteus;
 using namespace builtins::gpu;
-
-#if PROTEUS_ENABLE_HIP
-#define TARGET "hip"
-#include <hip/hip_runtime.h>
-#elif PROTEUS_ENABLE_CUDA
-#define TARGET "cuda"
-#include <cuda_runtime.h>
-#define hipError_t cudaError_t
-#define hipSuccess cudaSuccess
-#define hipMalloc cudaMalloc
-#define hipFree cudaFree
-#define hipMemcpy cudaMemcpy
-#define hipMemcpyHostToDevice cudaMemcpyHostToDevice
-#define hipMemcpyDeviceToHost cudaMemcpyDeviceToHost
-#define hipDeviceSynchronize cudaDeviceSynchronize
-#define hipGetErrorString cudaGetErrorString
-#else
-#error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA defined"
-#endif
-
 
 // Naive tiled JIT kernel (C = A x B) for square N x N, double.
 static auto getMatmulKernel(int N, int TileSize) {
@@ -324,24 +305,24 @@ int main(int argc, char** argv) {
   // Device allocations
   double *AD, *BD, *CD, *DD, *ED, *FD, *GD;
   size_t Bytes = sizeof(double) * N * N;
-  hipMalloc(reinterpret_cast<void **>(&AD), Bytes);
-  hipMalloc(reinterpret_cast<void **>(&BD), Bytes);
-  hipMalloc(reinterpret_cast<void **>(&CD), Bytes);
-  hipMalloc(reinterpret_cast<void **>(&DD), Bytes);
-  hipMalloc(reinterpret_cast<void **>(&ED), Bytes);
-  hipMalloc(reinterpret_cast<void **>(&FD), Bytes);
-  hipMalloc(reinterpret_cast<void **>(&GD), Bytes);
+  gpuMalloc(reinterpret_cast<void **>(&AD), Bytes);
+  gpuMalloc(reinterpret_cast<void **>(&BD), Bytes);
+  gpuMalloc(reinterpret_cast<void **>(&CD), Bytes);
+  gpuMalloc(reinterpret_cast<void **>(&DD), Bytes);
+  gpuMalloc(reinterpret_cast<void **>(&ED), Bytes);
+  gpuMalloc(reinterpret_cast<void **>(&FD), Bytes);
+  gpuMalloc(reinterpret_cast<void **>(&GD), Bytes);
 
   // Stage inputs
-  hipMemcpy(AD, AH, Bytes, hipMemcpyHostToDevice);
-  hipMemcpy(BD, BH, Bytes, hipMemcpyHostToDevice);
-  hipMemcpy(CD, CH, Bytes, hipMemcpyHostToDevice);
-  hipMemcpy(DD, DH, Bytes, hipMemcpyHostToDevice);
+  gpuMemcpy(AD, AH, Bytes, gpuMemcpyHostToDevice);
+  gpuMemcpy(BD, BH, Bytes, gpuMemcpyHostToDevice);
+  gpuMemcpy(CD, CH, Bytes, gpuMemcpyHostToDevice);
+  gpuMemcpy(DD, DH, Bytes, gpuMemcpyHostToDevice);
 
 
   if (KernelType == "hip_regtiled") {
     auto [JitMod, KernelHandle] = getRegSharedTiledMatmulKernel(N, blockTileMArg, blockTileNArg, kTileArg, RegTileM, RegTileN);
-    JitMod->compile(true);
+    JitMod->compile();
 
     unsigned int gridX = static_cast<unsigned int>(N / blockTileNArg);
     unsigned int gridY = static_cast<unsigned int>(N / blockTileMArg);
@@ -351,7 +332,7 @@ int main(int argc, char** argv) {
     KernelHandle.launch({gridX, gridY, 1u}, {blockX, blockY, 1u}, 0, nullptr, ED, AD, BD);
     KernelHandle.launch({gridX, gridY, 1u}, {blockX, blockY, 1u}, 0, nullptr, FD, CD, DD);
     KernelHandle.launch({gridX, gridY, 1u}, {blockX, blockY, 1u}, 0, nullptr, GD, ED, FD);
-    hipDeviceSynchronize();
+    gpuDeviceSynchronize();
 
     double TotalMs = 0.0;
     auto Start = std::chrono::high_resolution_clock::now();
@@ -360,7 +341,7 @@ int main(int argc, char** argv) {
       KernelHandle.launch({gridX, gridY, 1u}, {blockX, blockY, 1u}, 0, nullptr, FD, CD, DD);
       KernelHandle.launch({gridX, gridY, 1u}, {blockX, blockY, 1u}, 0, nullptr, GD, ED, FD);
     }
-    hipDeviceSynchronize();
+    gpuDeviceSynchronize();
 
     auto End = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> Ms = End - Start;
@@ -372,7 +353,7 @@ int main(int argc, char** argv) {
 
   } else {
     auto [JitMod, KernelHandle] = getMatmulKernel(N, MatmulTileSize);
-    JitMod->compile(true);
+    JitMod->compile();
 
     unsigned int gridX = static_cast<unsigned int>((N + MatmulTileSize - 1) / MatmulTileSize);
     unsigned int gridY = static_cast<unsigned int>((N + MatmulTileSize - 1) / MatmulTileSize);
@@ -382,7 +363,7 @@ int main(int argc, char** argv) {
     KernelHandle.launch({gridX, gridY, 1u}, {blockX, blockY, 1u}, 0, nullptr, ED, AD, BD);
     KernelHandle.launch({gridX, gridY, 1u}, {blockX, blockY, 1u}, 0, nullptr, FD, CD, DD);
     KernelHandle.launch({gridX, gridY, 1u}, {blockX, blockY, 1u}, 0, nullptr, GD, ED, FD);
-    hipDeviceSynchronize();
+    gpuDeviceSynchronize();
 
     double TotalMs = 0.0;
     auto Start = std::chrono::high_resolution_clock::now();
@@ -391,7 +372,7 @@ int main(int argc, char** argv) {
       KernelHandle.launch({gridX, gridY, 1u}, {blockX, blockY, 1u}, 0, nullptr, FD, CD, DD);
       KernelHandle.launch({gridX, gridY, 1u}, {blockX, blockY, 1u}, 0, nullptr, GD, ED, FD);
     }
-    hipDeviceSynchronize();
+    gpuDeviceSynchronize();
 
     auto End = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> Ms = End - Start;
@@ -403,18 +384,18 @@ int main(int argc, char** argv) {
   }
 
   if (DoVerify) {
-    hipMemcpy(GH, GD, Bytes, hipMemcpyDeviceToHost);
+    gpuMemcpy(GH, GD, Bytes, gpuMemcpyDeviceToHost);
     if (verifyG(GH, N)) std::cout << "Verification passed" << std::endl;
     else                std::cout << "Verification failed" << std::endl;
   }
 
-  hipFree(AD);
-  hipFree(BD);
-  hipFree(CD);
-  hipFree(DD);
-  hipFree(ED);
-  hipFree(FD);
-  hipFree(GD);
+  gpuFree(AD);
+  gpuFree(BD);
+  gpuFree(CD);
+  gpuFree(DD);
+  gpuFree(ED);
+  gpuFree(FD);
+  gpuFree(GD);
 
   delete[] AH; delete[] BH; delete[] CH; delete[] DH;
   delete[] EH; delete[] FH; delete[] GH;

@@ -4,15 +4,13 @@
 #include <chrono>
 #include <random>
 #include <memory>
-#include <hip/hip_runtime.h>
+#include "../../../gpu/gpu_common.h"
 #include <proteus/JitFrontend.hpp>
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitInterface.hpp>
 
 using namespace proteus;
 using namespace builtins::gpu;
-
-#define TARGET "hip"
 
 float* attention_host(float* key, float* value, float* query,
   const int n, const int d)
@@ -185,33 +183,33 @@ float* attention_device(float* key, float* value, float* query,
 {
   // input
   float *d_key;
-  hipMalloc((void**)&d_key, n * d * sizeof(float));
-  hipMemcpy(d_key, key, n * d * sizeof(float), hipMemcpyHostToDevice);
+  gpuMalloc((void**)&d_key, n * d * sizeof(float));
+  gpuMemcpy(d_key, key, n * d * sizeof(float), gpuMemcpyHostToDevice);
 
   float *d_value;
-  hipMalloc((void**)&d_value, n * d * sizeof(float));
-  hipMemcpy(d_value, value, n * d * sizeof(float), hipMemcpyHostToDevice);
+  gpuMalloc((void**)&d_value, n * d * sizeof(float));
+  gpuMemcpy(d_value, value, n * d * sizeof(float), gpuMemcpyHostToDevice);
 
   float *d_query;
-  hipMalloc((void**)&d_query, d * sizeof(float));
-  hipMemcpy(d_query, query, d * sizeof(float), hipMemcpyHostToDevice);
+  gpuMalloc((void**)&d_query, d * sizeof(float));
+  gpuMemcpy(d_query, query, d * sizeof(float), gpuMemcpyHostToDevice);
 
   // intermediate
   float *d_dot_product;
-  hipMalloc((void**)&d_dot_product, n * sizeof(float));
+  gpuMalloc((void**)&d_dot_product, n * sizeof(float));
 
   float *d_exp_sum;
-  hipMalloc((void**)&d_exp_sum, sizeof(float));
+  gpuMalloc((void**)&d_exp_sum, sizeof(float));
 
   // result
   float *output = (float*) malloc (d * sizeof(float));
   float *d_output;
-  hipMalloc((void**)&d_output, d * sizeof(float));
+  gpuMalloc((void**)&d_output, d * sizeof(float));
 
   float *d_score;
-  hipMalloc((void**)&d_score, n * sizeof(float));
+  gpuMalloc((void**)&d_score, n * sizeof(float));
 
-  hipDeviceSynchronize();
+  gpuDeviceSynchronize();
 
   // Build and compile kernels
   auto [JitMod1, KernelHandle1] = getAttentionKernel1(n, d);
@@ -223,13 +221,13 @@ float* attention_device(float* key, float* value, float* query,
   auto [JitMod3, KernelHandle3] = getAttentionKernel3(n, d);
   JitMod3->compile();
 
-  hipDeviceSynchronize();
+  gpuDeviceSynchronize();
 
   auto start = std::chrono::steady_clock::now();
 
   for (int k = 0; k < repeat; k++) {
     if(verify) {
-      hipMemset(d_exp_sum, 0, 4);
+      gpuMemset(d_exp_sum, 0, sizeof(float));
     }
 
     KernelHandle1.launch(
@@ -251,19 +249,19 @@ float* attention_device(float* key, float* value, float* query,
       d_score, d_value, d_output);
   }
 
-  hipDeviceSynchronize();
+  gpuDeviceSynchronize();
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time of kernels %f (ms)\n", time * 1e-6f / repeat);
 
-  hipMemcpy(output, d_output, d * sizeof(float), hipMemcpyDeviceToHost);
-  hipFree(d_score);
-  hipFree(d_value);
-  hipFree(d_output);
-  hipFree(d_key);
-  hipFree(d_dot_product);
-  hipFree(d_exp_sum);
-  hipFree(d_query);
+  gpuMemcpy(output, d_output, d * sizeof(float), gpuMemcpyDeviceToHost);
+  gpuFree(d_score);
+  gpuFree(d_value);
+  gpuFree(d_output);
+  gpuFree(d_key);
+  gpuFree(d_dot_product);
+  gpuFree(d_exp_sum);
+  gpuFree(d_query);
   return output;
 }
 

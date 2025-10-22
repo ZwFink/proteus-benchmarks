@@ -11,7 +11,6 @@
 #include <initializer_list>
 #include <limits>
 #include <memory>
-#include <hip/hip_runtime.h>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -22,12 +21,11 @@
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitInterface.hpp>
 
+#include "../../../gpu/gpu_common.h"
 #include "bude.h"
 
 using namespace proteus;
 using namespace builtins::gpu;
-
-#define TARGET "hip"
 
 namespace {
 
@@ -546,51 +544,51 @@ std::vector<float> runKernel(const Params &params) {
   float *d_protein_y = nullptr;
   float *d_protein_z = nullptr;
   int32_t *d_protein_type = nullptr;
-  hipMalloc(reinterpret_cast<void **>(&d_protein_x),
+  gpuMalloc(reinterpret_cast<void **>(&d_protein_x),
             params.natpro * sizeof(float));
-  hipMalloc(reinterpret_cast<void **>(&d_protein_y),
+  gpuMalloc(reinterpret_cast<void **>(&d_protein_y),
             params.natpro * sizeof(float));
-  hipMalloc(reinterpret_cast<void **>(&d_protein_z),
+  gpuMalloc(reinterpret_cast<void **>(&d_protein_z),
             params.natpro * sizeof(float));
-  hipMalloc(reinterpret_cast<void **>(&d_protein_type),
+  gpuMalloc(reinterpret_cast<void **>(&d_protein_type),
             params.natpro * sizeof(int32_t));
-  hipMemcpy(d_protein_x, h_protein_x.data(),
+  gpuMemcpy(d_protein_x, h_protein_x.data(),
             params.natpro * sizeof(float),
-            hipMemcpyHostToDevice);
-  hipMemcpy(d_protein_y, h_protein_y.data(),
+            gpuMemcpyHostToDevice);
+  gpuMemcpy(d_protein_y, h_protein_y.data(),
             params.natpro * sizeof(float),
-            hipMemcpyHostToDevice);
-  hipMemcpy(d_protein_z, h_protein_z.data(),
+            gpuMemcpyHostToDevice);
+  gpuMemcpy(d_protein_z, h_protein_z.data(),
             params.natpro * sizeof(float),
-            hipMemcpyHostToDevice);
-  hipMemcpy(d_protein_type, h_protein_type.data(),
+            gpuMemcpyHostToDevice);
+  gpuMemcpy(d_protein_type, h_protein_type.data(),
             params.natpro * sizeof(int32_t),
-            hipMemcpyHostToDevice);
+            gpuMemcpyHostToDevice);
 
   float *d_ligand_x = nullptr;
   float *d_ligand_y = nullptr;
   float *d_ligand_z = nullptr;
   int32_t *d_ligand_type = nullptr;
-  hipMalloc(reinterpret_cast<void **>(&d_ligand_x),
+  gpuMalloc(reinterpret_cast<void **>(&d_ligand_x),
             params.natlig * sizeof(float));
-  hipMalloc(reinterpret_cast<void **>(&d_ligand_y),
+  gpuMalloc(reinterpret_cast<void **>(&d_ligand_y),
             params.natlig * sizeof(float));
-  hipMalloc(reinterpret_cast<void **>(&d_ligand_z),
+  gpuMalloc(reinterpret_cast<void **>(&d_ligand_z),
             params.natlig * sizeof(float));
-  hipMalloc(reinterpret_cast<void **>(&d_ligand_type),
+  gpuMalloc(reinterpret_cast<void **>(&d_ligand_type),
             params.natlig * sizeof(int32_t));
-  hipMemcpy(d_ligand_x, h_ligand_x.data(),
+  gpuMemcpy(d_ligand_x, h_ligand_x.data(),
             params.natlig * sizeof(float),
-            hipMemcpyHostToDevice);
-  hipMemcpy(d_ligand_y, h_ligand_y.data(),
+            gpuMemcpyHostToDevice);
+  gpuMemcpy(d_ligand_y, h_ligand_y.data(),
             params.natlig * sizeof(float),
-            hipMemcpyHostToDevice);
-  hipMemcpy(d_ligand_z, h_ligand_z.data(),
+            gpuMemcpyHostToDevice);
+  gpuMemcpy(d_ligand_z, h_ligand_z.data(),
             params.natlig * sizeof(float),
-            hipMemcpyHostToDevice);
-  hipMemcpy(d_ligand_type, h_ligand_type.data(),
+            gpuMemcpyHostToDevice);
+  gpuMemcpy(d_ligand_type, h_ligand_type.data(),
             params.natlig * sizeof(int32_t),
-            hipMemcpyHostToDevice);
+            gpuMemcpyHostToDevice);
 
   float *transforms_0 = nullptr;
   float *transforms_1 = nullptr;
@@ -598,25 +596,25 @@ std::vector<float> runKernel(const Params &params) {
   float *transforms_3 = nullptr;
   float *transforms_4 = nullptr;
   float *transforms_5 = nullptr;
-  hipMalloc(reinterpret_cast<void **>(&transforms_0),
+  gpuMalloc(reinterpret_cast<void **>(&transforms_0),
             params.nposes * sizeof(float));
-  hipMalloc(reinterpret_cast<void **>(&transforms_1),
+  gpuMalloc(reinterpret_cast<void **>(&transforms_1),
             params.nposes * sizeof(float));
-  hipMalloc(reinterpret_cast<void **>(&transforms_2),
+  gpuMalloc(reinterpret_cast<void **>(&transforms_2),
             params.nposes * sizeof(float));
-  hipMalloc(reinterpret_cast<void **>(&transforms_3),
+  gpuMalloc(reinterpret_cast<void **>(&transforms_3),
             params.nposes * sizeof(float));
-  hipMalloc(reinterpret_cast<void **>(&transforms_4),
+  gpuMalloc(reinterpret_cast<void **>(&transforms_4),
             params.nposes * sizeof(float));
-  hipMalloc(reinterpret_cast<void **>(&transforms_5),
+  gpuMalloc(reinterpret_cast<void **>(&transforms_5),
             params.nposes * sizeof(float));
 
   float *transformPtrs[6] = {transforms_0, transforms_1, transforms_2,
                              transforms_3, transforms_4, transforms_5};
   for (size_t i = 0; i < 6; ++i) {
-    hipMemcpy(transformPtrs[i], params.poses[i].data(),
+    gpuMemcpy(transformPtrs[i], params.poses[i].data(),
               params.nposes * sizeof(float),
-              hipMemcpyHostToDevice);
+              gpuMemcpyHostToDevice);
   }
 
   std::vector<int32_t> h_ff_hbtype(params.ntypes);
@@ -633,33 +631,33 @@ std::vector<float> runKernel(const Params &params) {
   float *d_ff_radius = nullptr;
   float *d_ff_hphb = nullptr;
   float *d_ff_elsc = nullptr;
-  hipMalloc(reinterpret_cast<void **>(&d_ff_hbtype),
+  gpuMalloc(reinterpret_cast<void **>(&d_ff_hbtype),
             params.ntypes * sizeof(int32_t));
-  hipMalloc(reinterpret_cast<void **>(&d_ff_radius),
+  gpuMalloc(reinterpret_cast<void **>(&d_ff_radius),
             params.ntypes * sizeof(float));
-  hipMalloc(reinterpret_cast<void **>(&d_ff_hphb),
+  gpuMalloc(reinterpret_cast<void **>(&d_ff_hphb),
             params.ntypes * sizeof(float));
-  hipMalloc(reinterpret_cast<void **>(&d_ff_elsc),
+  gpuMalloc(reinterpret_cast<void **>(&d_ff_elsc),
             params.ntypes * sizeof(float));
-  hipMemcpy(d_ff_hbtype, h_ff_hbtype.data(),
+  gpuMemcpy(d_ff_hbtype, h_ff_hbtype.data(),
             params.ntypes * sizeof(int32_t),
-            hipMemcpyHostToDevice);
-  hipMemcpy(d_ff_radius, h_ff_radius.data(),
+            gpuMemcpyHostToDevice);
+  gpuMemcpy(d_ff_radius, h_ff_radius.data(),
             params.ntypes * sizeof(float),
-            hipMemcpyHostToDevice);
-  hipMemcpy(d_ff_hphb, h_ff_hphb.data(),
+            gpuMemcpyHostToDevice);
+  gpuMemcpy(d_ff_hphb, h_ff_hphb.data(),
             params.ntypes * sizeof(float),
-            hipMemcpyHostToDevice);
-  hipMemcpy(d_ff_elsc, h_ff_elsc.data(),
+            gpuMemcpyHostToDevice);
+  gpuMemcpy(d_ff_elsc, h_ff_elsc.data(),
             params.ntypes * sizeof(float),
-            hipMemcpyHostToDevice);
+            gpuMemcpyHostToDevice);
 
   float *results = nullptr;
-  hipMalloc(reinterpret_cast<void **>(&results),
+  gpuMalloc(reinterpret_cast<void **>(&results),
             params.nposes * sizeof(float));
 
   auto [JitMod, KernelHandle] = buildFastenKernel(params.posesPerWI, params.ntypes, params.nposes, params.natlig, params.natpro);
-  JitMod->compile(true);
+  JitMod->compile();
   // JitMod->print();
 
   double global = std::ceil(static_cast<double>(params.nposes) /
@@ -680,7 +678,7 @@ std::vector<float> runKernel(const Params &params) {
                       transforms_3, transforms_4, transforms_5,
                       d_ff_hbtype, d_ff_radius, d_ff_hphb,
                       d_ff_elsc, results);
-  hipDeviceSynchronize();
+  gpuDeviceSynchronize();
 
   auto kernelStart = std::chrono::high_resolution_clock::now();
   for (size_t i = 0; i < params.iterations; ++i) {
@@ -696,34 +694,34 @@ std::vector<float> runKernel(const Params &params) {
                         d_ff_elsc, results);
 
   }
-  hipDeviceSynchronize();
+  gpuDeviceSynchronize();
   auto kernelEnd = std::chrono::high_resolution_clock::now();
 
-  hipMemcpy(energies.data(), results,
+  gpuMemcpy(energies.data(), results,
             params.nposes * sizeof(float),
-            hipMemcpyDeviceToHost);
+            gpuMemcpyDeviceToHost);
 
   printTimings(params, elapsedMillis(kernelStart, kernelEnd));
 
-  hipFree(d_protein_x);
-  hipFree(d_protein_y);
-  hipFree(d_protein_z);
-  hipFree(d_protein_type);
-  hipFree(d_ligand_x);
-  hipFree(d_ligand_y);
-  hipFree(d_ligand_z);
-  hipFree(d_ligand_type);
-  hipFree(transforms_0);
-  hipFree(transforms_1);
-  hipFree(transforms_2);
-  hipFree(transforms_3);
-  hipFree(transforms_4);
-  hipFree(transforms_5);
-  hipFree(d_ff_hbtype);
-  hipFree(d_ff_radius);
-  hipFree(d_ff_hphb);
-  hipFree(d_ff_elsc);
-  hipFree(results);
+  gpuFree(d_protein_x);
+  gpuFree(d_protein_y);
+  gpuFree(d_protein_z);
+  gpuFree(d_protein_type);
+  gpuFree(d_ligand_x);
+  gpuFree(d_ligand_y);
+  gpuFree(d_ligand_z);
+  gpuFree(d_ligand_type);
+  gpuFree(transforms_0);
+  gpuFree(transforms_1);
+  gpuFree(transforms_2);
+  gpuFree(transforms_3);
+  gpuFree(transforms_4);
+  gpuFree(transforms_5);
+  gpuFree(d_ff_hbtype);
+  gpuFree(d_ff_radius);
+  gpuFree(d_ff_hphb);
+  gpuFree(d_ff_elsc);
+  gpuFree(results);
 
   return energies;
 }

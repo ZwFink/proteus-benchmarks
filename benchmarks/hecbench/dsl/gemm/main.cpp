@@ -1,4 +1,4 @@
-#include <hip/hip_runtime.h>
+#include "../../../gpu/gpu_common.h"
 #include <proteus/JitFrontend.hpp>
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitInterface.hpp>
@@ -15,10 +15,6 @@
 
 using namespace proteus;
 using namespace builtins::gpu;
-
-#define TARGET "hip"
-
-
 
 
 // clang-format off
@@ -267,7 +263,7 @@ int main(int argc, char** argv) {
   unsigned int N = 8192;
   int NumTrials = 5;
   bool DoVerify = true;
-  std::string KernelType = "hip_regtiled";
+  std::string KernelType = "gpu_regtiled";
   int blockTileMArg = BlockTileM;
   int blockTileNArg = BlockTileN;
   int kTileArg = KTile;
@@ -285,9 +281,12 @@ int main(int argc, char** argv) {
     } else if (!std::strcmp(argv[i], "--kernel")) {
       if (i + 1 < argc) {
         KernelType = argv[++i];
-        if (KernelType != "jit" && KernelType != "hip_regtiled") {
+        if (KernelType == "hip_regtiled") {
+          KernelType = "gpu_regtiled";
+        }
+        if (KernelType != "jit" && KernelType != "gpu_regtiled") {
           std::cerr << "Error: Invalid kernel type '" << KernelType
-                    << "'. Valid options: jit, hip_regtiled\n";
+                    << "'. Valid options: jit, gpu_regtiled\n";
           return 1;
         }
       }
@@ -299,7 +298,7 @@ int main(int argc, char** argv) {
       std::cout << "Usage: " << argv[0]
                 << " [-n|--N N] [-t|--trials T] [--kernel KERNEL] [--verify|--no-verify]"
                 << " [blockTileM blockTileN kTile]\n"
-                << "  KERNEL: jit, hip_regtiled (default: hip_regtiled)\n"
+                << "  KERNEL: jit, gpu_regtiled (default: gpu_regtiled)\n"
                 << "  Positional tile sizes are used for the JIT reg-tiled kernel;"
                 << " defaults are " << BlockTileM << " " << BlockTileN << " " << KTile << "\n";
       return 0;
@@ -329,9 +328,9 @@ int main(int argc, char** argv) {
   double *BD;
   double *CD;
   size_t Bytes = sizeof(double) * N * N;
-  hipMalloc(reinterpret_cast<void **>(&AD), Bytes);
-  hipMalloc(reinterpret_cast<void **>(&BD), Bytes);
-  hipMalloc(reinterpret_cast<void **>(&CD), Bytes);
+  gpuErrCheck(gpuMalloc(reinterpret_cast<void **>(&AD), Bytes));
+  gpuErrCheck(gpuMalloc(reinterpret_cast<void **>(&BD), Bytes));
+  gpuErrCheck(gpuMalloc(reinterpret_cast<void **>(&CD), Bytes));
 
   for (int I = 0; I < N; I++) {
     for (int J = 0; J < N; J++) {
@@ -341,25 +340,25 @@ int main(int argc, char** argv) {
     }
   }
   // Stage inputs to device
-  hipMemcpy(AD, AH, Bytes, hipMemcpyHostToDevice);
-  hipMemcpy(BD, BH, Bytes, hipMemcpyHostToDevice);
-  hipMemcpy(CD, CH, Bytes, hipMemcpyHostToDevice);
+  gpuErrCheck(gpuMemcpy(AD, AH, Bytes, gpuMemcpyHostToDevice));
+  gpuErrCheck(gpuMemcpy(BD, BH, Bytes, gpuMemcpyHostToDevice));
+  gpuErrCheck(gpuMemcpy(CD, CH, Bytes, gpuMemcpyHostToDevice));
 
   // Kernel execution based on type
-  if (KernelType == "hip_regtiled") {
+  if (KernelType == "gpu_regtiled") {
     auto [JitMod, KernelHandle] = getRegSharedTiledMatmulKernel(N, blockTileMArg, blockTileNArg, kTileArg, RegTileM, RegTileN);
     JitMod->compile(true);
-    KernelHandle.launch({static_cast<unsigned int>(N / blockTileNArg), static_cast<unsigned int>(N / blockTileMArg), 1u}, {static_cast<unsigned int>(blockTileNArg / RegTileN), static_cast<unsigned int>(blockTileMArg / RegTileM), 1u}, 0, nullptr, CD, AD, BD);
-    hipDeviceSynchronize();
+    (void)KernelHandle.launch({static_cast<unsigned int>(N / blockTileNArg), static_cast<unsigned int>(N / blockTileMArg), 1u}, {static_cast<unsigned int>(blockTileNArg / RegTileN), static_cast<unsigned int>(blockTileMArg / RegTileM), 1u}, 0, nullptr, CD, AD, BD);
+    gpuErrCheck(gpuDeviceSynchronize());
 
     // Timed trials
     double TotalMs = 0.0;
     auto Start = std::chrono::high_resolution_clock::now();
     for (int T = 0; T < NumTrials; ++T) {
-      KernelHandle.launch({static_cast<unsigned int>(N / blockTileNArg), static_cast<unsigned int>(N / blockTileMArg), 1u}, {static_cast<unsigned int>(blockTileNArg / RegTileN), static_cast<unsigned int>(blockTileMArg / RegTileM), 1u}, 0, nullptr, CD, AD, BD);
+      (void)KernelHandle.launch({static_cast<unsigned int>(N / blockTileNArg), static_cast<unsigned int>(N / blockTileMArg), 1u}, {static_cast<unsigned int>(blockTileNArg / RegTileN), static_cast<unsigned int>(blockTileMArg / RegTileM), 1u}, 0, nullptr, CD, AD, BD);
 
     }
-    hipDeviceSynchronize();
+    gpuErrCheck(gpuDeviceSynchronize());
     auto End = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> Ms = End - Start;
     TotalMs = Ms.count();
@@ -371,16 +370,16 @@ int main(int argc, char** argv) {
   } else if (KernelType == "jit") {
     auto [JitMod, KernelHandle] = getMatmulKernel(N, MatmulTileSize);
     JitMod->compile(true);
-    KernelHandle.launch({(N + MatmulTileSize - 1) / MatmulTileSize, (N + MatmulTileSize - 1) / MatmulTileSize, 1}, {MatmulTileSize, MatmulTileSize, 1}, 0, nullptr, CD, AD, BD);
-    hipDeviceSynchronize();
+    (void)KernelHandle.launch({(N + MatmulTileSize - 1) / MatmulTileSize, (N + MatmulTileSize - 1) / MatmulTileSize, 1}, {MatmulTileSize, MatmulTileSize, 1}, 0, nullptr, CD, AD, BD);
+    gpuErrCheck(gpuDeviceSynchronize());
 
     // Timed trials
     double TotalMs = 0.0;
     auto Start = std::chrono::high_resolution_clock::now();
     for (int T = 0; T < NumTrials; ++T) {
-      KernelHandle.launch({(N + MatmulTileSize - 1) / MatmulTileSize, (N + MatmulTileSize - 1) / MatmulTileSize, 1}, {MatmulTileSize, MatmulTileSize, 1}, 0, nullptr, CD, AD, BD);
+      (void)KernelHandle.launch({(N + MatmulTileSize - 1) / MatmulTileSize, (N + MatmulTileSize - 1) / MatmulTileSize, 1}, {MatmulTileSize, MatmulTileSize, 1}, 0, nullptr, CD, AD, BD);
     }
-    hipDeviceSynchronize();
+    gpuErrCheck(gpuDeviceSynchronize());
     auto End = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> Ms = End - Start;
     TotalMs = Ms.count();
@@ -392,15 +391,15 @@ int main(int argc, char** argv) {
 
   // Final result back to host after timing loop
   if (DoVerify) {
-    hipMemcpy(CH, CD, Bytes, hipMemcpyDeviceToHost);
+    gpuErrCheck(gpuMemcpy(CH, CD, Bytes, gpuMemcpyDeviceToHost));
     verify(CH, N);
     std::cout << "Verification passed" << std::endl;
   }
 
   // Cleanup device and host memory
-  hipFree(AD);
-  hipFree(BD);
-  hipFree(CD);
+  gpuErrCheck(gpuFree(AD));
+  gpuErrCheck(gpuFree(BD));
+  gpuErrCheck(gpuFree(CD));
   delete[] AH;
   delete[] BH;
   delete[] CH;
