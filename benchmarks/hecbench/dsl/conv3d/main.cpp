@@ -17,49 +17,10 @@
 #include <proteus/JitFrontend.hpp>
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitInterface.hpp>
+#include "../../../gpu/gpu_common.h"
 
 using namespace proteus;
 using namespace builtins::gpu;
-
-#if PROTEUS_ENABLE_HIP
-#define TARGET "hip"
-#include <hip/hip_runtime.h>
-#define gpuError_t hipError_t
-#define gpuStream_t hipStream_t
-#define gpuSuccess hipSuccess
-#define gpuGetErrorString hipGetErrorString
-#define gpuDeviceSynchronize hipDeviceSynchronize
-#define gpuMalloc hipMalloc
-#define gpuFree hipFree
-#define gpuMemcpy hipMemcpy
-#define gpuMemcpyHostToDevice hipMemcpyHostToDevice
-#define gpuMemcpyDeviceToHost hipMemcpyDeviceToHost
-#elif PROTEUS_ENABLE_CUDA
-#define TARGET "cuda"
-#include <cuda_runtime.h>
-#define gpuError_t cudaError_t
-#define gpuStream_t cudaStream_t
-#define gpuSuccess cudaSuccess
-#define gpuGetErrorString cudaGetErrorString
-#define gpuDeviceSynchronize cudaDeviceSynchronize
-#define gpuMalloc cudaMalloc
-#define gpuFree cudaFree
-#define gpuMemcpy cudaMemcpy
-#define gpuMemcpyHostToDevice cudaMemcpyHostToDevice
-#define gpuMemcpyDeviceToHost cudaMemcpyDeviceToHost
-#else
-#error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA defined"
-#endif
-
-#define gpuErrCheck(CALL)                                                      \
-  do {                                                                         \
-    gpuError_t err__ = (CALL);                                                 \
-    if (err__ != gpuSuccess) {                                                 \
-      printf("ERROR @ %s:%d -> %s\n", __FILE__, __LINE__,                      \
-             gpuGetErrorString(err__));                                        \
-      abort();                                                                 \
-    }                                                                          \
-  } while (0)
 
 #define TILE_WIDTH 16
 
@@ -359,10 +320,10 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
   // Test conv3d_s1 with grid(N, M, Z)
   auto start = std::chrono::steady_clock::now();
   for (int i = 0; i < repeat; i++) {
-    gpuErrCheck(KernelHandle1.launch(
+    KernelHandle1.launch(
         {static_cast<unsigned int>(N), static_cast<unsigned int>(M),
          static_cast<unsigned int>(Z)},
-        {TILE_WIDTH, TILE_WIDTH, 1u}, 0, nullptr, dX, dW, dY));
+        {TILE_WIDTH, TILE_WIDTH, 1u}, 0, nullptr, dX, dW, dY);
   }
 
   gpuErrCheck(gpuDeviceSynchronize());
@@ -379,10 +340,10 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
   // Test conv3d_s2 with grid(M, Z, N)
   start = std::chrono::steady_clock::now();
   for (int i = 0; i < repeat; i++) {
-    gpuErrCheck(KernelHandle2.launch(
+    KernelHandle2.launch(
         {static_cast<unsigned int>(M), static_cast<unsigned int>(Z),
          static_cast<unsigned int>(N)},
-        {TILE_WIDTH, TILE_WIDTH, 1u}, 0, nullptr, dX, dW, dY));
+        {TILE_WIDTH, TILE_WIDTH, 1u}, 0, nullptr, dX, dW, dY);
   }
 
   gpuErrCheck(gpuDeviceSynchronize());
@@ -398,10 +359,10 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
   // Test conv3d_s3 with grid(Z, N, M)
   start = std::chrono::steady_clock::now();
   for (int i = 0; i < repeat; i++) {
-    gpuErrCheck(KernelHandle3.launch(
+    KernelHandle3.launch(
         {static_cast<unsigned int>(Z), static_cast<unsigned int>(N),
          static_cast<unsigned int>(M)},
-        {TILE_WIDTH, TILE_WIDTH, 1u}, 0, nullptr, dX, dW, dY));
+        {TILE_WIDTH, TILE_WIDTH, 1u}, 0, nullptr, dX, dW, dY);
   }
 
   gpuErrCheck(gpuDeviceSynchronize());

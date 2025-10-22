@@ -1,3 +1,4 @@
+#include "../../../gpu/gpu_common.h"
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitFrontend.hpp>
 
@@ -12,15 +13,6 @@
 
 using namespace proteus;
 using namespace builtins::gpu;
-
-#if PROTEUS_ENABLE_HIP
-#define TARGET "hip"
-#include <hip/hip_runtime.h>
-#elif PROTEUS_ENABLE_CUDA
-#define TARGET "cuda"
-#else
-#error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA defined"
-#endif
 
 #define divceil(n, m) (((n)-1) / (m) + 1)
 
@@ -387,26 +379,26 @@ for (int trial = 0; trial < p.num_trials; trial++) {
   auto trial_start = std::chrono::steady_clock::now();
 
   // Allocate device memory
-  hipMalloc((void**)&d_in, in_size);
-  hipMalloc((void**)&d_out, out_size);
+  gpuMalloc((void**)&d_in, in_size);
+  gpuMalloc((void**)&d_out, out_size);
 
   // Transfer data to device
-  hipMemcpy(d_in, in, in_size, hipMemcpyHostToDevice);
+  gpuMemcpy(d_in, in, in_size, gpuMemcpyHostToDevice);
 
   // Launch kernel
-  hipDeviceSynchronize();
+  gpuDeviceSynchronize();
   auto kstart = std::chrono::steady_clock::now();
 
   KernelHandle.launch({grid.x, grid.y, grid.z}, {block.x, block.y, block.z}, 0, nullptr,
                   d_in,
                   d_out);
 
-  hipDeviceSynchronize();
+  gpuDeviceSynchronize();
   auto kend = std::chrono::steady_clock::now();
   auto ktime = std::chrono::duration<double, std::milli>(kend - kstart).count();
 
   // Transfer data back to host
-  hipMemcpy(gpu_out, d_out, out_size, hipMemcpyDeviceToHost);
+  gpuMemcpy(gpu_out, d_out, out_size, gpuMemcpyDeviceToHost);
 
   auto trial_end = std::chrono::steady_clock::now();
   auto trial_time = std::chrono::duration<double, std::milli>(trial_end - trial_start).count();
@@ -415,8 +407,8 @@ for (int trial = 0; trial < p.num_trials; trial++) {
   std::cout << "Trial " << (trial + 1) << " - kernel execution time: " << std::fixed << std::setprecision(4) << ktime << "ms, total time: " << trial_time << "ms" << std::endl;
 
   // Free device memory
-  hipFree(d_in);
-  hipFree(d_out);
+  gpuFree(d_in);
+  gpuFree(d_out);
 }
 
 // Verify

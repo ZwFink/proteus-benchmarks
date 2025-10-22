@@ -4,13 +4,13 @@ command = "make -j"
 [hecbench.config.build.nvidia.clean]
 command = "make -j clean"
 [hecbench.config.build.nvidia.dsl]
-command = "make -j"
+command = "make -j GPU_BACKEND=cuda"
 [hecbench.config.build.amd]
 command = "make -j"
 [hecbench.config.build.amd.clean]
 command = "make -j clean"
 [hecbench.config.build.amd.dsl]
-command = "make -j"
+command = "make -j GPU_BACKEND=hip"
 
 [hecbench.adam]
 [hecbench.adam.nvidia]
@@ -198,7 +198,7 @@ exe = "gemm-proteus.x"
 path = "benchmarks/hecbench/dsl/gemm"
 exe = "gemm-proteus.x"
 [hecbench.gemm.inputs]
-default = "--no-verify --N 8192 --kernel hip_regtiled"
+default = "--no-verify --N 8192 --kernel gpu_regtiled"
 
 [hecbench.conv3d]
 [hecbench.conv3d.amd.aot]
