@@ -267,7 +267,7 @@ int main(int argc, char** argv) {
   unsigned int N = 8192;
   int NumTrials = 5;
   bool DoVerify = true;
-  std::string KernelType = "jit_regtiled";
+  std::string KernelType = "hip_regtiled";
   int blockTileMArg = BlockTileM;
   int blockTileNArg = BlockTileN;
   int kTileArg = KTile;
@@ -285,9 +285,9 @@ int main(int argc, char** argv) {
     } else if (!std::strcmp(argv[i], "--kernel")) {
       if (i + 1 < argc) {
         KernelType = argv[++i];
-        if (KernelType != "jit" && KernelType != "jit_regtiled") {
+        if (KernelType != "jit" && KernelType != "hip_regtiled") {
           std::cerr << "Error: Invalid kernel type '" << KernelType
-                    << "'. Valid options: jit, jit_regtiled\n";
+                    << "'. Valid options: jit, hip_regtiled\n";
           return 1;
         }
       }
@@ -299,7 +299,7 @@ int main(int argc, char** argv) {
       std::cout << "Usage: " << argv[0]
                 << " [-n|--N N] [-t|--trials T] [--kernel KERNEL] [--verify|--no-verify]"
                 << " [blockTileM blockTileN kTile]\n"
-                << "  KERNEL: jit, jit_regtiled (default: jit_regtiled)\n"
+                << "  KERNEL: jit, hip_regtiled (default: hip_regtiled)\n"
                 << "  Positional tile sizes are used for the JIT reg-tiled kernel;"
                 << " defaults are " << BlockTileM << " " << BlockTileN << " " << KTile << "\n";
       return 0;
@@ -346,7 +346,7 @@ int main(int argc, char** argv) {
   hipMemcpy(CD, CH, Bytes, hipMemcpyHostToDevice);
 
   // Kernel execution based on type
-  if (KernelType == "jit_regtiled") {
+  if (KernelType == "hip_regtiled") {
     auto [JitMod, KernelHandle] = getRegSharedTiledMatmulKernel(N, blockTileMArg, blockTileNArg, kTileArg, RegTileM, RegTileN);
     JitMod->compile(true);
     KernelHandle.launch({static_cast<unsigned int>(N / blockTileNArg), static_cast<unsigned int>(N / blockTileMArg), 1u}, {static_cast<unsigned int>(blockTileNArg / RegTileN), static_cast<unsigned int>(blockTileMArg / RegTileM), 1u}, 0, nullptr, CD, AD, BD);

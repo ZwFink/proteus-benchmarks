@@ -57,4 +57,4 @@ clean:
 	rm -rf *.x *.o *.ll *.bc .proteus
 
 run: $(program)
-	./$(program) --no-verify --N 8192 --kernel jit_regtiled
+	./$(program) --no-verify --N 8192 --kernel hip_regtiled
