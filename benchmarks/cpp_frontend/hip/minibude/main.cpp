@@ -18,7 +18,7 @@
 #include <proteus/CppJitModule.hpp>
 #include "inja/inja.h"
 
-#include "../../gpu/gpu_common.h"
+#include "../../../gpu/gpu_common.h"
 #include "bude.h"
 
 using namespace proteus;

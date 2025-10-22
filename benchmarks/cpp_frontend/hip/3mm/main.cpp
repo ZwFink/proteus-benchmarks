@@ -11,7 +11,7 @@
 #include "inja/inja.h"
 
 using namespace proteus;
-#include "../../gpu/gpu_common.h"
+#include "../../../gpu/gpu_common.h"
 
 constexpr const char *kDeviceInclude = "#include <hip/hip_runtime.h>";
 

@@ -5,7 +5,7 @@
 #include <random>
 #include <hip/hip_runtime.h>
 #include "kernels.h"
-#include "../../../cpp_frontend/gpu/gpu_common.h"
+#include "../../../gpu/gpu_common.h"
 
 float* attention_host(const float* key, const float* value, const float* query,
   const int n, const int d) 
