@@ -44,7 +44,7 @@
 #include <vector>
 #include <hip/hip_runtime.h>
 
-#include "../../../cpp_frontend/gpu/gpu_common.h"
+#include "../../../gpu/gpu_common.h"
 
 #define divceil(n, m) (((n)-1) / (m) + 1)
 

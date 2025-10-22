@@ -10,7 +10,7 @@
 #include <chrono>
 #include <string>
 
-#include "../../../cpp_frontend/gpu/gpu_common.h"
+#include "../../../gpu/gpu_common.h"
 
 constexpr int MatmulTileSize = 16;
 

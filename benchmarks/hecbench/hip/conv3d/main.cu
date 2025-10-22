@@ -11,7 +11,7 @@
 #include <chrono>
 #include <iostream>
 #include <hip/hip_runtime.h>
-#include "../../../cpp_frontend/gpu/gpu_common.h"
+#include "../../../gpu/gpu_common.h"
 
 #define TILE_WIDTH 16
 

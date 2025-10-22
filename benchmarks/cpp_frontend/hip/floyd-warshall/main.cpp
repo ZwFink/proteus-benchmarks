@@ -9,7 +9,7 @@
 #include <proteus/CppJitModule.hpp>
 #include "inja/inja.h"
 
-#include "../../gpu/gpu_common.h"
+#include "../../../gpu/gpu_common.h"
 #include <hiprand/hiprand.h>
 
 using namespace proteus;

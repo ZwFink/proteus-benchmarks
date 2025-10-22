@@ -11,7 +11,7 @@
 #include <string>
 
 
-#include "../../../cpp_frontend/gpu/gpu_common.h"
+#include "../../../gpu/gpu_common.h"
 
 constexpr int MatmulTileSize = 16;
 // Non-tiled (naive) HIP kernel for matrix multiplication: C = A * B

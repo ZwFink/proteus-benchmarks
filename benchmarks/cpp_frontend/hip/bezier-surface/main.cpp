@@ -49,7 +49,7 @@
 
 #include <proteus/CppJitModule.hpp>
 
-#include "../../gpu/gpu_common.h"
+#include "../../../gpu/gpu_common.h"
 #include "inja/inja.h"
 
 using namespace proteus;

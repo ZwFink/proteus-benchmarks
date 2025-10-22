@@ -1,6 +1,6 @@
 #include <proteus/CppJitModule.hpp>
 
-#include "../../gpu/gpu_common.h"
+#include "../../../gpu/gpu_common.h"
 
 #include <chrono>
 #include <iostream>
