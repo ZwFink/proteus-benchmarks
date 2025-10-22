@@ -61,7 +61,7 @@ endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-	CFLAGS += -O3 -ffast-math
+	CFLAGS += -O3
 endif
 
 CFLAGS  += -I${PROTEUS_PATH}/include -DPROTEUS_ENABLE_HIP
