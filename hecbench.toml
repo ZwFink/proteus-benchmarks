@@ -160,7 +160,7 @@ exe = "3mm-proteus.x"
 path = "benchmarks/hecbench/dsl/3mm"
 exe = "3mm-proteus.x"
 [hecbench.3mm.inputs]
-default = "--no-verify --N 8192 --kernel hip_regtiled"
+default = "--no-verify --N 8192 --kernel gpu_regtiled --trials 300"
 
 [hecbench.attention]
 [hecbench.attention.amd.aot]
@@ -179,7 +179,7 @@ exe = "attention-proteus.x"
 path = "benchmarks/hecbench/dsl/attention"
 exe = "attention-proteus.x"
 [hecbench.attention.inputs]
-default = "65536 2048 100"
+default = "65536 2048 1000"
 
 [hecbench.gemm]
 [hecbench.gemm.amd.aot]
@@ -198,7 +198,7 @@ exe = "gemm-proteus.x"
 path = "benchmarks/hecbench/dsl/gemm"
 exe = "gemm-proteus.x"
 [hecbench.gemm.inputs]
-default = "--no-verify --N 8192 --kernel gpu_regtiled"
+default = "--no-verify --N 8192 --kernel gpu_regtiled --trials 300"
 
 [hecbench.conv3d]
 [hecbench.conv3d.amd.aot]

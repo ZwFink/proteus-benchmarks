@@ -214,7 +214,7 @@ int main(int argc, char** argv) {
   unsigned int N = 2048;
   int NumTrials = 5;
   bool DoVerify = true;
-  std::string KernelType = "hip_regtiled";
+  std::string KernelType = "gpu_regtiled";
 
   for (int i = 1; i < argc; ++i) {
     if (!std::strcmp(argv[i], "--N") || !std::strcmp(argv[i], "-n")) {
@@ -230,14 +230,14 @@ int main(int argc, char** argv) {
     } else if (!std::strcmp(argv[i], "--help") || !std::strcmp(argv[i], "-h")) {
       std::cout << "Usage: " << argv[0]
                 << " [-n|--N N] [-t|--trials T] [--verify|--no-verify] [--kernel KERNEL)\n"
-                << "  KERNEL: hip, hip_regtiled (default: hip_regtiled)" << std::endl;
+                << "  KERNEL: hip, gpu_regtiled (default: gpu_regtiled)" << std::endl;
       return 0;
     }
   }
 
-  if (KernelType != "hip" && KernelType != "hip_regtiled") {
+  if (KernelType != "hip" && KernelType != "gpu_regtiled") {
     std::cerr << "Error: Invalid kernel type '" << KernelType
-              << "'. Valid options: hip, hip_regtiled\n";
+              << "'. Valid options: hip, gpu_regtiled\n";
     return 1;
   }
 
@@ -278,7 +278,7 @@ int main(int argc, char** argv) {
   gpuErrCheck(gpuMemcpy(CD, CH, Bytes, gpuMemcpyHostToDevice));
   gpuErrCheck(gpuMemcpy(DD, DH, Bytes, gpuMemcpyHostToDevice));
 
-  if (KernelType == "hip_regtiled") {
+  if (KernelType == "gpu_regtiled") {
     auto [JitMod, Kernel] = getRegSharedTiledMatMulKernel(N);
 
     // Warm-up: E=A*B, F=C*D, G=E*F

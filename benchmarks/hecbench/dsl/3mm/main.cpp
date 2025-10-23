@@ -235,7 +235,7 @@ int main(int argc, char** argv) {
   unsigned int N = 8192;
   int NumTrials = 5;
   bool DoVerify = true;
-  std::string KernelType = "hip_regtiled";
+  std::string KernelType = "gpu_regtiled";
   int blockTileMArg = BlockTileM;
   int blockTileNArg = BlockTileN;
   int kTileArg = KTile;
@@ -249,9 +249,9 @@ int main(int argc, char** argv) {
     } else if (!std::strcmp(argv[i], "--kernel")) {
       if (i + 1 < argc) {
         KernelType = argv[++i];
-        if (KernelType != "jit" && KernelType != "hip_regtiled") {
+        if (KernelType != "jit" && KernelType != "gpu_regtiled") {
           std::cerr << "Error: Invalid kernel type '" << KernelType
-                    << "'. Valid options: jit, hip_regtiled\n";
+                    << "'. Valid options: jit, gpu_regtiled\n";
           return 1;
         }
       }
@@ -263,7 +263,7 @@ int main(int argc, char** argv) {
       std::cout << "Usage: " << argv[0]
                 << " [-n|--N N] [-t|--trials T] [--kernel KERNEL] [--verify|--no-verify]"
                 << " [blockTileM blockTileN kTile]\n"
-                << "  KERNEL: jit, hip_regtiled (default: hip_regtiled)\n"
+                << "  KERNEL: jit, gpu_regtiled (default: gpu_regtiled)\n"
                 << "  Positional tile sizes are used for the JIT reg-tiled kernel;"
                 << " defaults are " << BlockTileM << " " << BlockTileN << " " << KTile << "\n";
       return 0;
@@ -320,7 +320,7 @@ int main(int argc, char** argv) {
   gpuMemcpy(DD, DH, Bytes, gpuMemcpyHostToDevice);
 
 
-  if (KernelType == "hip_regtiled") {
+  if (KernelType == "gpu_regtiled") {
     auto [JitMod, KernelHandle] = getRegSharedTiledMatmulKernel(N, blockTileMArg, blockTileNArg, kTileArg, RegTileM, RegTileN);
     JitMod->compile();
 

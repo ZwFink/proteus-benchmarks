@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
   unsigned int N = 8192;
   int NumTrials = 5;
   bool DoVerify = true;
-  std::string KernelType = "hip_regtiled";
+  std::string KernelType = "gpu_regtiled";
   int blockTileMArg = BlockTileM;
   int blockTileNArg = BlockTileN;
   int kTileArg = KTile;
@@ -210,9 +210,9 @@ int main(int argc, char** argv) {
     } else if (!std::strcmp(argv[i], "--kernel")) {
       if (i + 1 < argc) {
         KernelType = argv[++i];
-        if (KernelType != "hip" && KernelType != "hip_regtiled") {
+        if (KernelType != "hip" && KernelType != "gpu_regtiled") {
           std::cerr << "Error: Invalid kernel type '" << KernelType
-                    << "'. Valid options: hip, hip_regtiled\n";
+                    << "'. Valid options: hip, gpu_regtiled\n";
           return 1;
         }
       }
@@ -224,7 +224,7 @@ int main(int argc, char** argv) {
       std::cout << "Usage: " << argv[0]
                 << " [-n|--N N] [-t|--trials T] [--kernel KERNEL] [--verify|--no-verify]"
                 << " [blockTileM blockTileN kTile]\n"
-                << "  KERNEL: hip, hip_regtiled (default: hip_regtiled)\n"
+                << "  KERNEL: hip, gpu_regtiled (default: gpu_regtiled)\n"
                 << "  Positional tile sizes are used for the HIP reg-tiled kernel;"
                 << " defaults are " << BlockTileM << " " << BlockTileN << " " << KTile << "\n";
       return 0;
@@ -247,7 +247,7 @@ int main(int argc, char** argv) {
             << ", blkN=" << blockTileNArg
             << ", k=" << kTileArg << ")" << std::endl;
 
-  if (KernelType == "hip_regtiled") {
+  if (KernelType == "gpu_regtiled") {
     if (blockTileMArg != BlockTileM || blockTileNArg != BlockTileN || kTileArg != KTile) {
       std::cerr << "Warning: HIP reg-tiled kernel uses compile-time tile sizes; ignoring positional values. Using blkM="
                 << BlockTileM << ", blkN=" << BlockTileN << ", k=" << KTile << "\n";
@@ -288,7 +288,7 @@ int main(int argc, char** argv) {
   gpuErrCheck(gpuMemcpy(DD, DH, Bytes, gpuMemcpyHostToDevice));
 
   // Initial warmup compute E = A * B, F = C * D, G = E * F
-  if (KernelType == "hip_regtiled") {
+  if (KernelType == "gpu_regtiled") {
     hipRegSharedTiledMatmulLaunch(AD, BD, ED, N);
     hipRegSharedTiledMatmulLaunch(CD, DD, FD, N);
     hipRegSharedTiledMatmulLaunch(ED, FD, GD, N);
@@ -303,7 +303,7 @@ int main(int argc, char** argv) {
   double TotalMs = 0.0;
   auto Start = std::chrono::high_resolution_clock::now();
   for (int t = 0; t < NumTrials; ++t) {
-    if (KernelType == "hip_regtiled") {
+    if (KernelType == "gpu_regtiled") {
       hipRegSharedTiledMatmulLaunch(AD, BD, ED, N);
       hipRegSharedTiledMatmulLaunch(CD, DD, FD, N);
       hipRegSharedTiledMatmulLaunch(ED, FD, GD, N);
