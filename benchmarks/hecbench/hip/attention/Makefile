@@ -39,7 +39,7 @@ ifeq ($(OPTIMIZE),yes)
 endif
 
 ifeq ($(ENABLE_PROTEUS),yes)
-  CFLAGS += -fpass-plugin=${PROTEUS_PATH}/lib64/libProteusPass.so -DENABLE_PROTEUS
+  CFLAGS += -fpass-plugin=${PROTEUS_PATH}/lib64/libProteusPass.so -DPROTEUS_JIT
   LDFLAGS += -Wl,-rpath,${PROTEUS_PATH}/lib64 -L${PROTEUS_PATH}/lib64/ -lproteus \
              -L${ROCM_PATH}/lib -L${ROCM_PATH}/llvm/lib \
              -Wl,--start-group \

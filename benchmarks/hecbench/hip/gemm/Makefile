@@ -27,7 +27,7 @@ obj = $(source:.cpp=$(SUFFIX).o)
 # Sets Flags
 #===============================================================================
 
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I${PROTEUS_PATH}/include
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I${PROTEUS_PATH}/include -fpass-plugin=${PROTEUS_PATH}/lib64/libProteusPass.so 
 LDFLAGS =
 
 ifeq ($(DEBUG),yes)
@@ -40,7 +40,8 @@ ifeq ($(OPTIMIZE),yes)
 endif
 
 ifeq ($(ENABLE_PROTEUS),yes)
-  CFLAGS += -fpass-plugin=${PROTEUS_PATH}/lib64/libProteusPass.so -DENABLE_PROTEUS
+  CFLAGS += -DENABLE_PROTEUS
+endif
   LDFLAGS += -Wl,-rpath,${PROTEUS_PATH}/lib64 -L${PROTEUS_PATH}/lib64/ -lproteus \
           -L${ROCM_PATH}/lib -L${ROCM_PATH}/llvm/lib \
           -Wl,--start-group \
@@ -49,7 +50,7 @@ ifeq ($(ENABLE_PROTEUS),yes)
           -Wl,--end-group \
           $(shell ${ROCM_PATH}/llvm/bin/llvm-config --system-libs) \
           -llldCommon -llldELF
-endif
+
 
 #===============================================================================
 # Targets to Build

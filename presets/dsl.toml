@@ -1,3 +1,4 @@
 [[dsl]]
 profmode = "direct"
 [[dsl.env]]
+PROTEUS_USE_STORED_CACHE = "1"
