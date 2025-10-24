@@ -4,8 +4,6 @@
 #include <string>
 #include <iomanip>
 
-#include <hip/hip_runtime.h>
-
 #ifndef DEFAULT_PPWI
 #define DEFAULT_PPWI 1
 #endif

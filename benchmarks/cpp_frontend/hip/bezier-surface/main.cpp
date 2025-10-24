@@ -54,7 +54,13 @@
 
 using namespace proteus;
 
+#if PROTEUS_ENABLE_HIP
 constexpr const char *kDeviceInclude = "#include <hip/hip_runtime.h>";
+#elif PROTEUS_ENABLE_CUDA
+constexpr const char *kDeviceInclude = "#include <cuda_runtime.h>";
+#else
+#error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA defined"
+#endif
 
 constexpr std::string_view StrBezierKernelTemplate = R"cpp(
 {{ include }}

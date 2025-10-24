@@ -14,16 +14,21 @@
 #include <string_view>
 #include <memory>
 #include <utility>
-#include <hip/hip_runtime.h>
 #include <proteus/CppJitModule.hpp>
 #include "inja/inja.h"
 #include "../../../gpu/gpu_common.h"
 
 using namespace proteus;
 
-#define TARGET "hip"
-#define INCLUDE "#include <hip/hip_runtime.h>"
 #define TILE_WIDTH 16
+
+#if PROTEUS_ENABLE_HIP
+constexpr const char *kDeviceInclude = "#include <hip/hip_runtime.h>";
+#elif PROTEUS_ENABLE_CUDA
+constexpr const char *kDeviceInclude = "#include <cuda_runtime.h>";
+#else
+#error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA"
+#endif
 
 #define II(n,c,h,w) ((n)*C*Hin*Win+(c)*Hin*Win+(h)*Win+w)
 #define WI(n,c,h,w) ((n)*C*K*K+(c)*K*K+(h)*K+w)
@@ -68,7 +73,7 @@ void reference(const float * __restrict__ X,
 }
 
 // Kernel template for conv3d_s1 (blockIdx organization: N, M, Z)
-constexpr std::string_view StrConv3dS1Template = INCLUDE R"cpp(
+constexpr std::string_view StrConv3dS1Template = R"cpp({{ device_include }}
 extern "C" __global__ void conv3d_s1(const float * __restrict__ X,
                                       const float * __restrict__ W,
                                             float * __restrict__ Y)
@@ -106,7 +111,7 @@ extern "C" __global__ void conv3d_s1(const float * __restrict__ X,
 )cpp";
 
 // Kernel template for conv3d_s2 (blockIdx organization: M, Z, N)
-constexpr std::string_view StrConv3dS2Template = INCLUDE R"cpp(
+constexpr std::string_view StrConv3dS2Template = R"cpp({{ device_include }}
 extern "C" __global__ void conv3d_s2(const float * __restrict__ X,
                                       const float * __restrict__ W,
                                             float * __restrict__ Y)
@@ -144,7 +149,7 @@ extern "C" __global__ void conv3d_s2(const float * __restrict__ X,
 )cpp";
 
 // Kernel template for conv3d_s3 (blockIdx organization: Z, N, M)
-constexpr std::string_view StrConv3dS3Template = INCLUDE R"cpp(
+constexpr std::string_view StrConv3dS3Template = R"cpp({{ device_include }}
 extern "C" __global__ void conv3d_s3(const float * __restrict__ X,
                                       const float * __restrict__ W,
                                             float * __restrict__ Y)
@@ -195,6 +200,7 @@ static auto getConv3dS1Kernel(int C, int M, int K, int Hin, int Win, int Hout, i
     {"Wout", Wout},
     {"W_grid", W_grid}
   };
+  data["device_include"] = kDeviceInclude;
   auto kernelSource = inja::render(std::string{StrConv3dS1Template}, data);
   auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
   auto Kernel = JitMod->getKernel<void(const float *, const float *, float *)>("conv3d_s1");
@@ -215,6 +221,7 @@ static auto getConv3dS2Kernel(int C, int M, int K, int Hin, int Win, int Hout, i
     {"Wout", Wout},
     {"W_grid", W_grid}
   };
+  data["device_include"] = kDeviceInclude;
   auto kernelSource = inja::render(std::string{StrConv3dS2Template}, data);
   auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
   auto Kernel = JitMod->getKernel<void(const float *, const float *, float *)>("conv3d_s2");
@@ -235,6 +242,7 @@ static auto getConv3dS3Kernel(int C, int M, int K, int Hin, int Win, int Hout, i
     {"Wout", Wout},
     {"W_grid", W_grid}
   };
+  data["device_include"] = kDeviceInclude;
   auto kernelSource = inja::render(std::string{StrConv3dS3Template}, data);
   auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
   auto Kernel = JitMod->getKernel<void(const float *, const float *, float *)>("conv3d_s3");
@@ -277,13 +285,13 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
   }
 
   float *dX, *dW, *dY;
-  gpuErrCheck(hipMalloc((void **)&dX, X_bytes));
-  gpuErrCheck(hipMalloc((void **)&dW, W_bytes));
-  gpuErrCheck(hipMalloc((void **)&dY, Y_bytes));
+  gpuErrCheck(gpuMalloc((void **)&dX, X_bytes));
+  gpuErrCheck(gpuMalloc((void **)&dW, W_bytes));
+  gpuErrCheck(gpuMalloc((void **)&dY, Y_bytes));
 
-  gpuErrCheck(hipMemcpy(dX, X, X_bytes, hipMemcpyHostToDevice));
-  gpuErrCheck(hipMemcpy(dW, W, W_bytes, hipMemcpyHostToDevice));
-  gpuErrCheck(hipMemcpy(dY, Y, Y_bytes, hipMemcpyHostToDevice));
+  gpuErrCheck(gpuMemcpy(dX, X, X_bytes, gpuMemcpyHostToDevice));
+  gpuErrCheck(gpuMemcpy(dW, W, W_bytes, gpuMemcpyHostToDevice));
+  gpuErrCheck(gpuMemcpy(dY, Y, Y_bytes, gpuMemcpyHostToDevice));
 
   int W_grid = (Wout + TILE_WIDTH - 1) / TILE_WIDTH;
   int H_grid = (Hout + TILE_WIDTH - 1) / TILE_WIDTH;
@@ -293,7 +301,7 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
   printf("output dimensions: M=%d Wout=%d Hout=%d\n", M, Wout, Hout);
   printf("3D grid dimensions: N=%d M=%d Z=%d\n", N, M, Z);
 
-  gpuErrCheck(hipDeviceSynchronize());
+  gpuErrCheck(gpuDeviceSynchronize());
 
   // Get kernels with specialized parameters
   auto [JitModS1, KernelS1] = getConv3dS1Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
@@ -308,13 +316,13 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
                     0, nullptr, dX, dW, dY);
   }
 
-  gpuErrCheck(hipDeviceSynchronize());
+  gpuErrCheck(gpuDeviceSynchronize());
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average kernel execution time of conv3d_s1 kernel: %f (us)\n",
          (time * 1e-3f) / repeat);
   if (do_verify) {
-    gpuErrCheck(hipMemcpy(Y, dY, Y_bytes, hipMemcpyDeviceToHost));
+    gpuErrCheck(gpuMemcpy(Y, dY, Y_bytes, gpuMemcpyDeviceToHost));
     verify(Y, Y_ref, Y_size);
   }
 
@@ -326,13 +334,13 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
                     0, nullptr, dX, dW, dY);
   }
 
-  gpuErrCheck(hipDeviceSynchronize());
+  gpuErrCheck(gpuDeviceSynchronize());
   end = std::chrono::steady_clock::now();
   time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average kernel execution time of conv3d_s2 kernel: %f (us)\n",
          (time * 1e-3f) / repeat);
   if (do_verify) {
-    gpuErrCheck(hipMemcpy(Y, dY, Y_bytes, hipMemcpyDeviceToHost));
+    gpuErrCheck(gpuMemcpy(Y, dY, Y_bytes, gpuMemcpyDeviceToHost));
     verify(Y, Y_ref, Y_size);
   }
 
@@ -344,13 +352,13 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
                     0, nullptr, dX, dW, dY);
   }
 
-  gpuErrCheck(hipDeviceSynchronize());
+  gpuErrCheck(gpuDeviceSynchronize());
   end = std::chrono::steady_clock::now();
   time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average kernel execution time of conv3d_s3 kernel: %f (us)\n",
          (time * 1e-3f) / repeat);
   if (do_verify) {
-    gpuErrCheck(hipMemcpy(Y, dY, Y_bytes, hipMemcpyDeviceToHost));
+    gpuErrCheck(gpuMemcpy(Y, dY, Y_bytes, gpuMemcpyDeviceToHost));
     verify(Y, Y_ref, Y_size);
   }
 
@@ -360,9 +368,9 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
   if (do_verify) {
     free(Y_ref);
   }
-  gpuErrCheck(hipFree(dX));
-  gpuErrCheck(hipFree(dW));
-  gpuErrCheck(hipFree(dY));
+  gpuErrCheck(gpuFree(dX));
+  gpuErrCheck(gpuFree(dW));
+  gpuErrCheck(gpuFree(dY));
 }
 
 int main(int argc, char* argv[]) {

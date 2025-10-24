@@ -3,10 +3,16 @@
 ###############################################################################
 
 # Compiler can be set below, or via environment variable
-CC        = ${PROTEUS_CC}
-OPTIMIZE  = yes
-DEBUG     = no
-PROTEUS_PATH  ?=/path/to/proteus/install
+CC              = ${PROTEUS_CC}
+OPTIMIZE        = yes
+DEBUG           = no
+PROTEUS_PATH    ?= /path/to/proteus/install
+GPU_BACKEND     ?= hip
+OFFLOAD_ARCH    ?= gfx942
+LLVM_INSTALL_DIR ?= ${ROCM_PATH}/llvm
+LLVM_CONFIG     ?= ${LLVM_INSTALL_DIR}/bin/llvm-config
+CUDA_PATH       ?= ${CUDA_HOME}
+CUDA_ARCH       ?= sm_90
 
 ###############################################################################
 # Program name & source code list
@@ -20,7 +26,7 @@ obj = $(source:.cpp=.o)
 ###############################################################################
 # Flags
 ###############################################################################
-CLANG_LIBS = -lclangAPINotes -lclangARCMigrate -lclangAST -lclangASTMatchers -lclangAnalysis \
+HIP_CLANG_LIBS = -lclangAPINotes -lclangARCMigrate -lclangAST -lclangASTMatchers -lclangAnalysis \
 -lclangAnalysisFlowSensitive -lclangAnalysisFlowSensitiveModels -lclangApplyReplacements -lclangBasic -lclangChangeNamespace \
 -lclangCodeGen -lclangCrossTU -lclangDaemon -lclangDaemonTweaks -lclangDependencyScanning \
 -lclangDirectoryWatcher -lclangDoc -lclangDriver -lclangDynamicASTMatchers -lclangEdit \
@@ -37,35 +43,62 @@ CLANG_LIBS = -lclangAPINotes -lclangARCMigrate -lclangAST -lclangASTMatchers -lc
 -lclangTidyObjCModule -lclangTidyOpenMPModule -lclangTidyPerformanceModule -lclangTidyPlugin -lclangTidyPortabilityModule \
 -lclangTidyReadabilityModule -lclangTidyUtils -lclangTidyZirconModule -lclangTooling -lclangToolingASTDiff \
 -lclangToolingCore -lclangToolingInclusions -lclangToolingInclusionsStdlib -lclangToolingRefactoring -lclangToolingSyntax \
--lclangTransformer -lclangdMain -lclangdRemoteIndex -lclangdSupport # -lclang_rt.builtins-x86_64
+-lclangTransformer -lclangdMain -lclangdRemoteIndex -lclangdSupport
 
+CUDA_CLANG_LIBS = -lclang-cpp
 
-# Standard Flags
-OFFLOAD_ARCH ?= gfx942
+COMMON_CFLAGS = $(EXTRA_CFLAGS) -std=c++20 -Wall \
+	-I${PROTEUS_PATH}/include \
+	-I${LLVM_INSTALL_DIR}/include \
+	-I${PWD}/../../lib/ \
+	$(shell ${LLVM_CONFIG} --cxxflags | sed 's/-fno-exceptions//g') \
+	-fexceptions
+
+COMMON_LDFLAGS = -Wl,-rpath,${PROTEUS_PATH}/lib64 -L${PROTEUS_PATH}/lib64/ -lproteus -pthread \
+	-L${LLVM_INSTALL_DIR}/lib -Wl,-rpath,${LLVM_INSTALL_DIR}/lib \
+	$(shell ${LLVM_CONFIG} --libs) \
+	$(shell ${LLVM_CONFIG} --system-libs)
+
 HIPFLAGS := --offload-arch=${OFFLOAD_ARCH}
-CFLAGS := $(EXTRA_CFLAGS) -Wall -I${ROCM_PATH}/llvm/include/ -I${ROCM_PATH}/include \
-	$(shell ${ROCM_PATH}/llvm/bin/llvm-config --cxxflags) -fexceptions $(HIPFLAGS) -std=c++20 \
-	-I../../lib
+HIP_CFLAGS = $(COMMON_CFLAGS) -DPROTEUS_ENABLE_HIP \
+	-I${ROCM_PATH}/include \
+	$(HIPFLAGS)
+HIP_LDFLAGS = $(COMMON_LDFLAGS) \
+	-L${ROCM_PATH}/lib -Wl,-rpath,${ROCM_PATH}/lib \
+	-llldCommon -llldELF -lamdhip64 -lhiprtc -lhiprtc-builtins \
+	$(HIP_CLANG_LIBS)
+HIP_LANG_FLAG := -x hip
 
-# Linker Flags
-LDFLAGS = -L${ROCM_PATH}/lib -L${ROCM_PATH}/llvm/lib \
-	$(shell ${ROCM_PATH}/llvm/bin/llvm-config --libs) \
-	$(shell ${ROCM_PATH}/llvm/bin/llvm-config --system-libs) \
-	-llldCommon -llldELF -lamdhip64 -Wl,-rpath,${ROCM_PATH}/lib $(CLANG_LIBS)
+CUDA_CFLAGS = $(COMMON_CFLAGS) -DPROTEUS_ENABLE_CUDA \
+	-I${CUDA_PATH}/include
+CUDA_LDFLAGS = $(COMMON_LDFLAGS) \
+	-L${CUDA_PATH}/lib64 -Wl,-rpath,${CUDA_PATH}/lib64 \
+	-L/usr/lib64 -Wl,-rpath,/usr/lib64 \
+	-lcudart -lnvrtc -lcuda -lnvptxcompiler_static -lnvJitLink \
+	$(CUDA_CLANG_LIBS)
+
+ifeq ($(GPU_BACKEND),hip)
+  CFLAGS := $(HIP_CFLAGS)
+  LDFLAGS := $(HIP_LDFLAGS)
+  LANG_FLAG := $(HIP_LANG_FLAG)
+else ifeq ($(GPU_BACKEND),cuda)
+  CFLAGS := $(CUDA_CFLAGS)
+  LDFLAGS := $(CUDA_LDFLAGS)
+  LANG_FLAG := $(CUDA_LANG_FLAG)
+else
+  $(error Unknown GPU_BACKEND '$(GPU_BACKEND)'; expected hip or cuda)
+endif
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
-	CFLAGS += -g
-	LDFLAGS  += -g
+  CFLAGS += -g
+  LDFLAGS += -g
 endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-	CFLAGS += -O3
+  CFLAGS += -O3
 endif
-
-CFLAGS  += -I${PROTEUS_PATH}/include -DPROTEUS_ENABLE_HIP
-LDFLAGS += -Wl,-rpath,${PROTEUS_PATH}/lib64 -L${PROTEUS_PATH}/lib64/ -lproteus
 
 ###############################################################################
 # Targets
@@ -75,7 +108,7 @@ $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
 %.o: %.cpp Makefile
-	$(CC) $(CFLAGS) -x hip -c $< -o $@
+	$(CC) $(CFLAGS) $(LANG_FLAG) -c $< -o $@
 
 .PHONY: clean run run_tiled
 
@@ -84,7 +117,7 @@ clean:
 
 # Default run (matches defaults in main.cpp)
 run: $(program)
-	./$(program) --no-verify --N 8192 --kernel hip_regtiled
+	./$(program) --no-verify --N 8192 --kernel gpu_regtiled
 
 run_tiled: $(program)
-	./$(program) --no-verify --N 8192 --kernel hip_regtiled
+	./$(program) --no-verify --N 8192 --kernel gpu_regtiled

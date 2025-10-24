@@ -10,15 +10,29 @@
 #include "inja/inja.h"
 
 #include "../../../gpu/gpu_common.h"
+
+#if PROTEUS_ENABLE_CUDA
+#include <curand.h>
+inline constexpr const char *kDeviceInclude = "#include <cuda_runtime.h>";
+using RandGenerator = curandGenerator_t;
+using RandStatus = curandStatus_t;
+inline constexpr RandStatus RAND_STATUS_SUCCESS = CURAND_STATUS_SUCCESS;
+inline constexpr curandRngType_t RAND_RNG_TYPE = CURAND_RNG_PSEUDO_DEFAULT;
+inline RandStatus randCreate(RandGenerator *gen) { return curandCreateGenerator(gen, RAND_RNG_TYPE); }
+inline RandStatus randSetSeed(RandGenerator gen, unsigned long long seed) {
+  return curandSetPseudoRandomGeneratorSeed(gen, seed);
+}
+inline RandStatus randGenerate(RandGenerator gen, unsigned int *data, size_t count) {
+  return curandGenerate(gen, data, count);
+}
+inline RandStatus randDestroy(RandGenerator gen) { return curandDestroyGenerator(gen); }
+#elif PROTEUS_ENABLE_HIP
 #include <hiprand/hiprand.h>
-
-using namespace proteus;
-
-static constexpr const char *kDeviceInclude = "#include <hip/hip_runtime.h>";
+inline constexpr const char *kDeviceInclude = "#include <hip/hip_runtime.h>";
 using RandGenerator = hiprandGenerator_t;
 using RandStatus = hiprandStatus_t;
-constexpr RandStatus RAND_STATUS_SUCCESS = HIPRAND_STATUS_SUCCESS;
-constexpr hiprandRngType_t RAND_RNG_TYPE = HIPRAND_RNG_PSEUDO_DEFAULT;
+inline constexpr RandStatus RAND_STATUS_SUCCESS = HIPRAND_STATUS_SUCCESS;
+inline constexpr hiprandRngType_t RAND_RNG_TYPE = HIPRAND_RNG_PSEUDO_DEFAULT;
 inline RandStatus randCreate(RandGenerator *gen) { return hiprandCreateGenerator(gen, RAND_RNG_TYPE); }
 inline RandStatus randSetSeed(RandGenerator gen, unsigned long long seed) {
   return hiprandSetPseudoRandomGeneratorSeed(gen, seed);
@@ -27,14 +41,20 @@ inline RandStatus randGenerate(RandGenerator gen, unsigned int *data, size_t cou
   return hiprandGenerate(gen, data, count);
 }
 inline RandStatus randDestroy(RandGenerator gen) { return hiprandDestroyGenerator(gen); }
+#else
+#error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA defined"
+#endif
 
-inline void RandCheck(RandStatus status, const char *file, int line) {
+using namespace proteus;
+
+inline void RandCheck(RandStatus status, const char *expr, const char *file, int line) {
   if (status != RAND_STATUS_SUCCESS) {
-    std::fprintf(stderr, "Random generator error %d at %s:%d\n", static_cast<int>(status), file, line);
-    std::exit(EXIT_FAILURE);
+    std::fprintf(stderr, "Random generator error (%d) at %s:%d while executing %s\n",
+                 static_cast<int>(status), file, line, expr);
+    std::abort();
   }
 }
-#define RAND_CALL(expr) RandCheck((expr), __FILE__, __LINE__)
+#define RAND_CALL(expr) RandCheck((expr), #expr, __FILE__, __LINE__)
 
 #define MAXDISTANCE (200)
 
