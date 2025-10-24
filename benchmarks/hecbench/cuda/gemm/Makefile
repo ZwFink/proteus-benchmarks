@@ -2,7 +2,6 @@
 # User Options
 #===============================================================================
 
-# Compiler can be set below, or via environment variable
 CC        ?= ${PROTEUS_CC}
 OPTIMIZE  = yes
 DEBUG     = no
@@ -22,30 +21,28 @@ else
   SUFFIX = -aot
 endif
 
-program = adam$(SUFFIX).x
+program = gemm$(SUFFIX).x
 source = main.cu
 obj = $(source:.cu=$(SUFFIX).o)
 
 #===============================================================================
-# Sets Flags
+# Flags
 #===============================================================================
 
-# Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall --cuda-gpu-arch=$(ARCH) \
-          --cuda-path=${CUDA_HOME} -DPROTEUS_ENABLE_CUDA
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall \
+          -I${PROTEUS_PATH}/include \
+          --cuda-gpu-arch=$(ARCH) --cuda-path=${CUDA_HOME} \
+          -DPROTEUS_ENABLE_CUDA
 
-# Linker Flags
 LDFLAGS = -Wl,-rpath,${CUDA_HOME}/lib64 -L${CUDA_HOME}/lib64 \
           -L${CUDA_HOME}/lib64/stubs \
           -lcuda -lcudadevrt -lcudart_static -lrt -lpthread -ldl
 
-# Debug Flags
 ifeq ($(DEBUG),yes)
-  CFLAGS += -g -DDEBUG
-  LDFLAGS  += -g
+  CFLAGS += -g
+  LDFLAGS += -g
 endif
 
-# Optimization Flags
 ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3
 endif
@@ -60,7 +57,7 @@ ifeq ($(ENABLE_PROTEUS),yes)
 endif
 
 #===============================================================================
-# Targets to Build
+# Targets
 #===============================================================================
 
 $(program): $(obj) Makefile
@@ -75,4 +72,4 @@ clean:
 	rm -rf *.x *.o *.ll *.bc .proteus
 
 run: $(program)
-	$(LAUNCHER) ./$(program) 10000 200 100
+	$(LAUNCHER) ./$(program) --no-verify --N 8192 --kernel cuda

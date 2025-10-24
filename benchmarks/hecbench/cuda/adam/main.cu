@@ -1,14 +1,17 @@
 #include "reference.h"
 #include <chrono>
-#include <cuda.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "../../../gpu/gpu_common.h"
+
 template <typename T, typename G>
-__global__
 #ifdef ENABLE_PROTEUS
+__global__
     __attribute__((annotate("jit", 5, 6, 7, 8, 9, 10, 11, 13)))
+#else
+__global__
 #endif
     void
     adam(T *__restrict__ p, T *__restrict__ m, T *__restrict__ v,
@@ -66,17 +69,17 @@ int main(int argc, char *argv[]) {
 
   float *d_m, *d_v, *d_g, *d_p;
 
-  cudaMalloc((void **)&d_m, size_bytes);
-  cudaMemcpy(d_m, m, size_bytes, cudaMemcpyHostToDevice);
+  gpuErrCheck(gpuMalloc((void **)&d_m, size_bytes));
+  gpuErrCheck(gpuMemcpy(d_m, m, size_bytes, gpuMemcpyHostToDevice));
 
-  cudaMalloc((void **)&d_v, size_bytes);
-  cudaMemcpy(d_v, v, size_bytes, cudaMemcpyHostToDevice);
+  gpuErrCheck(gpuMalloc((void **)&d_v, size_bytes));
+  gpuErrCheck(gpuMemcpy(d_v, v, size_bytes, gpuMemcpyHostToDevice));
 
-  cudaMalloc((void **)&d_g, size_bytes);
-  cudaMemcpy(d_g, g, size_bytes, cudaMemcpyHostToDevice);
+  gpuErrCheck(gpuMalloc((void **)&d_g, size_bytes));
+  gpuErrCheck(gpuMemcpy(d_g, g, size_bytes, gpuMemcpyHostToDevice));
 
-  cudaMalloc((void **)&d_p, size_bytes);
-  cudaMemcpy(d_p, p, size_bytes, cudaMemcpyHostToDevice);
+  gpuErrCheck(gpuMalloc((void **)&d_p, size_bytes));
+  gpuErrCheck(gpuMemcpy(d_p, p, size_bytes, gpuMemcpyHostToDevice));
 
   // Arbitrary constants
   const float step_size = 1e-3f;
@@ -92,7 +95,7 @@ int main(int argc, char *argv[]) {
 
   adamMode_t mode = ADAM_MODE_0;
 
-  cudaDeviceSynchronize();
+  gpuErrCheck(gpuDeviceSynchronize());
   auto start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < repeat; i++) {
@@ -101,18 +104,18 @@ int main(int argc, char *argv[]) {
                                           vector_size, mode, decay);
   }
 
-  cudaDeviceSynchronize();
+  gpuErrCheck(gpuDeviceSynchronize());
   auto end = std::chrono::steady_clock::now();
   auto time =
       std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average kernel execution time %f (ms)\n", time * 1e-6f / repeat);
 
-  cudaMemcpy(p, d_p, size_bytes, cudaMemcpyDeviceToHost);
+  gpuErrCheck(gpuMemcpy(p, d_p, size_bytes, gpuMemcpyDeviceToHost));
 
-  cudaFree(d_p);
-  cudaFree(d_m);
-  cudaFree(d_v);
-  cudaFree(d_g);
+  gpuErrCheck(gpuFree(d_p));
+  gpuErrCheck(gpuFree(d_m));
+  gpuErrCheck(gpuFree(d_v));
+  gpuErrCheck(gpuFree(d_g));
 
   // verify
   //  reference<float, float>(

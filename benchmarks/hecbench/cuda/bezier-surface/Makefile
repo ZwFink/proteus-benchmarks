@@ -2,13 +2,12 @@
 # User Options
 #===============================================================================
 
-# Compiler can be set below, or via environment variable
 CC        ?= ${PROTEUS_CC}
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_90
 LAUNCHER  =
-PROTEUS_PATH  ?= ${PROTEUS_INSTALL_PATH}
+PROTEUS_PATH  ?= /path/to/proteus/install
 ENABLE_PROTEUS ?= no
 CUDA_HOME ?= /usr/local/cuda
 
@@ -22,7 +21,8 @@ else
   SUFFIX = -aot
 endif
 
-program = adam$(SUFFIX).x
+program = bezier-surface$(SUFFIX).x
+
 source = main.cu
 obj = $(source:.cu=$(SUFFIX).o)
 
@@ -30,24 +30,21 @@ obj = $(source:.cu=$(SUFFIX).o)
 # Sets Flags
 #===============================================================================
 
-# Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall --cuda-gpu-arch=$(ARCH) \
-          --cuda-path=${CUDA_HOME} -DPROTEUS_ENABLE_CUDA
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall \
+          --cuda-gpu-arch=$(ARCH) --cuda-path=${CUDA_HOME} \
+          -DPROTEUS_ENABLE_CUDA
 
-# Linker Flags
 LDFLAGS = -Wl,-rpath,${CUDA_HOME}/lib64 -L${CUDA_HOME}/lib64 \
           -L${CUDA_HOME}/lib64/stubs \
           -lcuda -lcudadevrt -lcudart_static -lrt -lpthread -ldl
 
-# Debug Flags
 ifeq ($(DEBUG),yes)
-  CFLAGS += -g -DDEBUG
-  LDFLAGS  += -g
+	CFLAGS += -g
+	LDFLAGS  += -g
 endif
 
-# Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3
+	CFLAGS += -O3
 endif
 
 ifeq ($(ENABLE_PROTEUS),yes)
@@ -69,10 +66,8 @@ $(program): $(obj) Makefile
 %$(SUFFIX).o: %.cu Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
-.PHONY: clean run
-
 clean:
 	rm -rf *.x *.o *.ll *.bc .proteus
 
 run: $(program)
-	$(LAUNCHER) ./$(program) 10000 200 100
+	$(LAUNCHER) ./$(program) -n 300

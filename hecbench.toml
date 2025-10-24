@@ -163,6 +163,12 @@ exe = "3mm-cpp-proteus.x"
 [hecbench.3mm.amd.dsl]
 path = "benchmarks/hecbench/dsl/3mm"
 exe = "3mm-proteus.x"
+[hecbench.3mm.nvidia.aot]
+path = "benchmarks/hecbench/cuda/3mm"
+exe = "3mm-aot.x"
+[hecbench.3mm.nvidia.proteus]
+path = "benchmarks/hecbench/cuda/3mm"
+exe = "3mm-proteus.x"
 [hecbench.3mm.nvidia.cpp]
 path = "benchmarks/hecbench/cpp_frontend/3mm"
 exe = "3mm-cpp-proteus.x"
@@ -185,6 +191,12 @@ exe = "attention-cpp-frontend-proteus.x"
 [hecbench.attention.amd.dsl]
 path = "benchmarks/hecbench/dsl/attention"
 exe = "attention-proteus.x"
+[hecbench.attention.nvidia.aot]
+path = "benchmarks/hecbench/cuda/attention"
+exe = "attention-aot.x"
+[hecbench.attention.nvidia.proteus]
+path = "benchmarks/hecbench/cuda/attention"
+exe = "attention-proteus.x"
 [hecbench.attention.nvidia.cpp]
 path = "benchmarks/hecbench/cpp_frontend/attention"
 exe = "attention-cpp-frontend-proteus.x"
@@ -200,6 +212,12 @@ path = "benchmarks/hecbench/hip/gemm"
 exe = "gemm-aot.x"
 [hecbench.gemm.amd.proteus]
 path = "benchmarks/hecbench/hip/gemm"
+exe = "gemm-proteus.x"
+[hecbench.gemm.nvidia.aot]
+path = "benchmarks/hecbench/cuda/gemm"
+exe = "gemm-aot.x"
+[hecbench.gemm.nvidia.proteus]
+path = "benchmarks/hecbench/cuda/gemm"
 exe = "gemm-proteus.x"
 [hecbench.gemm.amd.cpp]
 path = "benchmarks/hecbench/cpp_frontend/gemm"
@@ -223,6 +241,12 @@ exe = "conv3d-aot.x"
 [hecbench.conv3d.amd.proteus]
 path = "benchmarks/hecbench/hip/conv3d"
 exe = "conv3d-proteus.x"
+[hecbench.conv3d.nvidia.aot]
+path = "benchmarks/hecbench/cuda/conv3d"
+exe = "conv3d-aot.x"
+[hecbench.conv3d.nvidia.proteus]
+path = "benchmarks/hecbench/cuda/conv3d"
+exe = "conv3d-proteus.x"
 [hecbench.conv3d.amd.cpp]
 path = "benchmarks/hecbench/cpp_frontend/conv3d"
 exe = "conv3d-cpp-frontend-proteus.x"
@@ -245,6 +269,12 @@ exe = "bezier-surface-aot.x"
 [hecbench.bezier-surface.amd.proteus]
 path = "benchmarks/hecbench/hip/bezier-surface"
 exe = "bezier-surface-proteus.x"
+[hecbench.bezier-surface.nvidia.aot]
+path = "benchmarks/hecbench/cuda/bezier-surface"
+exe = "bezier-surface-aot.x"
+[hecbench.bezier-surface.nvidia.proteus]
+path = "benchmarks/hecbench/cuda/bezier-surface"
+exe = "bezier-surface-proteus.x"
 [hecbench.bezier-surface.amd.cpp]
 path = "benchmarks/hecbench/cpp_frontend/bezier-surface"
 exe = "bezier-surface-cpp-frontend-proteus.x"
@@ -258,7 +288,7 @@ exe = "bezier-surface-proteus.x"
 path = "benchmarks/hecbench/dsl/bezier-surface"
 exe = "bezier-surface-proteus.x"
 [hecbench.bezier-surface.inputs]
-default = "-n 8192"
+default = "-n 8192 -t 10"
 
 [hecbench.minibude]
 [hecbench.minibude.amd.aot]
@@ -272,6 +302,12 @@ path = "benchmarks/hecbench/cpp_frontend/minibude"
 exe = "minibude-cpp-frontend-proteus.x"
 [hecbench.minibude.amd.dsl]
 path = "benchmarks/hecbench/dsl/minibude"
+exe = "minibude-proteus.x"
+[hecbench.minibude.nvidia.aot]
+path = "benchmarks/hecbench/cuda/minibude"
+exe = "minibude-aot.x"
+[hecbench.minibude.nvidia.proteus]
+path = "benchmarks/hecbench/cuda/minibude"
 exe = "minibude-proteus.x"
 [hecbench.minibude.nvidia.cpp]
 path = "benchmarks/hecbench/cpp_frontend/minibude"
@@ -288,6 +324,12 @@ path = "benchmarks/hecbench/hip/floyd-warshall"
 exe = "floyd-warshall-aot.x"
 [hecbench.floyd-warshall.amd.proteus]
 path = "benchmarks/hecbench/hip/floyd-warshall"
+exe = "floyd-warshall-proteus.x"
+[hecbench.floyd-warshall.nvidia.aot]
+path = "benchmarks/hecbench/cuda/floyd-warshall"
+exe = "floyd-warshall-aot.x"
+[hecbench.floyd-warshall.nvidia.proteus]
+path = "benchmarks/hecbench/cuda/floyd-warshall"
 exe = "floyd-warshall-proteus.x"
 [hecbench.floyd-warshall.amd.cpp]
 path = "benchmarks/hecbench/cpp_frontend/floyd-warshall"
