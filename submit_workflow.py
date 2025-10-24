@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Submit Proteus benchmark workflows to Flux.
+Submit Proteus benchmark workflows to Flux or Slurm.
 
 This utility reads a YAML configuration that captures runtime defaults
-and then emits `flux submit` jobs that wrap calls to `driver.py`.  Use
-CLI overrides for quick what-if runs; provide `--dry-run` to inspect
+and then emits scheduler jobs that wrap calls to `driver.py`. Use CLI
+overrides for quick what-if runs; provide `--dry-run` to inspect
 commands without submitting.
 """
 from __future__ import annotations
@@ -15,7 +15,7 @@ import shlex
 from dataclasses import dataclass
 from itertools import product
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import click
 
@@ -27,10 +27,12 @@ except ImportError as exc:  # pragma: no cover - runtime guard
         "Install it via `python -m pip install pyyaml` and re-run."
     ) from exc
 
-try:
-    from sh import ErrorReturnCode, flux
+# Try to import sh wrappers for both flux and slurm; either may be missing at runtime
+try:  # pragma: no cover - runtime guard
+    from sh import ErrorReturnCode, flux, sbatch  # type: ignore
 except ImportError:  # pragma: no cover - runtime guard
-    flux = None
+    flux = None  # type: ignore
+    sbatch = None  # type: ignore
 
     class ErrorReturnCode(Exception):
         """Fallback so type hints remain valid when sh is missing."""
@@ -39,6 +41,7 @@ except ImportError:  # pragma: no cover - runtime guard
 DEFAULT_CONFIG_PATH = "workflow.yaml"
 RESULTS_ROOT = Path("results")
 SUPPORTED_PROFMODES = ("direct", "profiler", "metrics")
+SUPPORTED_SCHEDULERS = ("flux", "slurm")
 
 
 class ConfigError(RuntimeError):
@@ -78,8 +81,8 @@ def _result_suffix(prof_mode: str) -> str:
     raise ConfigError(f"Unsupported profiling mode {prof_mode}")
 
 
-def _format_flux_command(args: Sequence[str]) -> str:
-    return "flux " + " ".join(shlex.quote(part) for part in args)
+def _format_command(prefix: str, args: Sequence[str]) -> str:
+    return prefix + " " + " ".join(shlex.quote(part) for part in args)
 
 
 @dataclass
@@ -99,6 +102,7 @@ class RunSpec:
     flux_flags: List[str]
     flux_env: Dict[str, str]
     cwd: Path
+    scheduler: str
 
     def label(self) -> str:
         return f"{self.machine}:{self.exec_mode}:{self.prof_mode}:{self.benchmark}"
@@ -149,6 +153,31 @@ def load_workflow_config(config_path: Path) -> Dict:
     return data
 
 
+def _select_scheduler(config_data: Dict, scheduler_override: Optional[str]) -> str:
+    scheduler = (scheduler_override or config_data.get("scheduler") or "flux").lower()
+    if scheduler not in SUPPORTED_SCHEDULERS:
+        raise ConfigError(f"Unsupported scheduler {scheduler!r}; choose from {', '.join(SUPPORTED_SCHEDULERS)}")
+    return scheduler
+
+
+def _scheduler_config(
+    scheduler: str, config_data: Dict, base: Path
+) -> Tuple[List[str], Dict[str, str], Path]:
+    """Return (flags, env, cwd) for the chosen scheduler."""
+    if scheduler == "flux":
+        flux_cfg = config_data.get("flux") or {}
+        flags = _as_list(flux_cfg.get("options"))
+        env = {str(k): str(v) for k, v in (flux_cfg.get("env") or {}).items()}
+        cwd = _resolve_path(base, flux_cfg.get("cwd")) or Path.cwd()
+        return flags, env, cwd
+    # slurm
+    slurm_cfg = config_data.get("slurm") or {}
+    flags = _as_list(slurm_cfg.get("options"))
+    env = {str(k): str(v) for k, v in (slurm_cfg.get("env") or {}).items()}
+    cwd = _resolve_path(base, slurm_cfg.get("cwd")) or Path.cwd()
+    return flags, env, cwd
+
+
 def build_run_specs(
     config_data: Dict,
     config_path: Path,
@@ -159,12 +188,14 @@ def build_run_specs(
     prof_modes_override: Sequence[str],
     result_root_override: Optional[str],
     reps_override: Optional[int],
+    scheduler_override: Optional[str],
 ) -> tuple[List[RunSpec], Path]:
     base = config_path.parent.resolve()
     proteus_cfg = config_data.get("proteus") or {}
     driver_cfg = config_data.get("driver") or {}
     workflow_cfg = config_data.get("workflow") or {}
-    flux_cfg = config_data.get("flux") or {}
+
+    scheduler = _select_scheduler(config_data, scheduler_override)
 
     compiler = proteus_cfg.get("cc") or os.environ.get("PROTEUS_CC")
     proteus_path = proteus_cfg.get("path") or os.environ.get("PROTEUS_PATH")
@@ -199,7 +230,9 @@ def build_run_specs(
     runconfig_paths = {
         mode: _resolve_path(base, path) for mode, path in runconfigs_cfg.items()
     }
-    missing_runconfigs = [mode for mode, path in runconfig_paths.items() if path is None or not path.exists()]
+    missing_runconfigs = [
+        mode for mode, path in runconfig_paths.items() if path is None or not path.exists()
+    ]
     if missing_runconfigs:
         raise ConfigError(f"Missing runconfig files for modes: {', '.join(missing_runconfigs)}")
 
@@ -244,30 +277,54 @@ def build_run_specs(
     driver_extra_args = _as_list(driver_cfg.get("extra_args"))
     driver_extra_env = {str(k): str(v) for k, v in (driver_cfg.get("env") or {}).items()}
 
-    flux_flags = _as_list(flux_cfg.get("options"))
-    flux_env = {str(k): str(v) for k, v in (flux_cfg.get("env") or {}).items()}
-    flux_cwd = _resolve_path(base, flux_cfg.get("cwd")) or Path.cwd()
+    base_flags, base_env, base_cwd = _scheduler_config(scheduler, config_data, base)
 
     mode_overrides = workflow_cfg.get("mode_overrides") or {}
 
     run_specs: List[RunSpec] = []
-    for exec_mode, machine, prof_mode, benchmark in product(exec_modes, machines, prof_modes, benchmarks):
+    for exec_mode, machine, prof_mode, benchmark in product(
+        exec_modes, machines, prof_modes, benchmarks
+    ):
         if exec_mode not in runconfig_paths:
-            raise ConfigError(f"Execution mode {exec_mode!r} is not defined in driver.runconfigs.")
+            raise ConfigError(
+                f"Execution mode {exec_mode!r} is not defined in driver.runconfigs."
+            )
         runconfig = runconfig_paths[exec_mode]
         overrides = mode_overrides.get(exec_mode, {})
         mode_driver_args = driver_extra_args + _as_list(overrides.get("driver_extra_args"))
-        mode_flux_flags = flux_flags + _as_list(overrides.get("flux_options"))
-        mode_flux_env = {
-            **flux_env,
-            **{str(k): str(v) for k, v in (overrides.get("flux_env") or {}).items()},
-        }
-        env_updates = {
-            **mode_flux_env,
-            **driver_extra_env,
+
+        # Scheduler-specific overrides
+        if scheduler == "flux":
+            mode_flags = base_flags + _as_list(overrides.get("flux_options"))
+            mode_env = {
+                **base_env,
+                **{str(k): str(v) for k, v in (overrides.get("flux_env") or {}).items()},
+            }
+        else:  # slurm
+            mode_flags = base_flags + _as_list(overrides.get("slurm_options"))
+            mode_env = {
+                **base_env,
+                **{str(k): str(v) for k, v in (overrides.get("slurm_env") or {}).items()},
+            }
+
+        # Derive LLVM paths from the compiler by default to support CUDA builds
+        cc_bin = compiler_path.parent
+        llvm_root = cc_bin.parent
+        derived_env = {
             "PROTEUS_PATH": str(proteus_install_path),
             "PROTEUS_CC": str(compiler_path),
+            "LLVM_INSTALL_DIR": str(llvm_root),
+            "LLVM_CONFIG": str(llvm_root / "bin/llvm-config"),
         }
+        # Prefer explicit config/env over derived defaults
+        env_updates = {
+            **mode_env,
+            **driver_extra_env,
+            **derived_env,
+        }
+        # Ensure CUDA backend selection for DSL/CPP when targeting NVIDIA
+        if machine == "nvidia" and exec_mode in ("cpp", "dsl"):
+            env_updates.setdefault("GPU_BACKEND", "cuda")
 
         run_specs.append(
             RunSpec(
@@ -283,13 +340,34 @@ def build_run_specs(
                 proteus_path=proteus_install_path,
                 driver_script=driver_script,
                 driver_extra_args=mode_driver_args,
-                flux_flags=mode_flux_flags,
+                flux_flags=mode_flags,
                 flux_env={str(k): str(v) for k, v in env_updates.items()},
-                cwd=flux_cwd,
+                cwd=base_cwd,
+                scheduler=scheduler,
             )
         )
 
     return run_specs, results_dir
+
+
+def _sanitize_output_error_flags(flags: Sequence[str]) -> List[str]:
+    sanitized: List[str] = []
+    skip_next = False
+    for flag in flags:
+        if skip_next:
+            skip_next = False
+            continue
+        if flag in {"--output", "-o", "--error", "-e"}:
+            skip_next = True
+            continue
+        if flag.startswith("--output=") or flag.startswith("--error="):
+            continue
+        if flag.startswith("-o") and flag != "-o":
+            continue
+        if flag.startswith("-e") and flag != "-e":
+            continue
+        sanitized.append(flag)
+    return sanitized
 
 
 def submit_run(
@@ -305,75 +383,129 @@ def submit_run(
 
     stdouterr_path = run.stdouterr_log()
 
-    sanitized_flags: List[str] = []
-    skip_next = False
-    for index, flag in enumerate(run.flux_flags):
-        if skip_next:
-            skip_next = False
-            continue
-        if flag in {"--output", "-o", "--error", "-e"}:
-            skip_next = True
-            continue
-        if flag.startswith("--output=") or flag.startswith("--error="):
-            continue
-        if flag.startswith("-o") and flag != "-o":
-            continue
-        if flag.startswith("-e") and flag != "-e":
-            continue
-        sanitized_flags.append(flag)
+    sanitized_flags = _sanitize_output_error_flags(run.flux_flags)
 
     driver_cmd = run.driver_command()
-    parts: List[str] = []
-    parts.append(shlex.join(driver_cmd))
-    activation_cmd = " && ".join(p for p in parts if p)
+    activation_cmd = shlex.join(driver_cmd)
 
-    flux_command = [
-        "submit",
+    if run.scheduler == "flux":
+        flux_command = [
+            "submit",
+            *sanitized_flags,
+            "--output",
+            str(stdouterr_path),
+            "--error",
+            str(stdouterr_path),
+            "bash",
+            "-lc",
+            activation_cmd,
+        ]
+        command_str = _format_command("flux", flux_command)
+
+        if dry_run:
+            if verbose:
+                click.echo(f"[DRY-RUN] {command_str}")
+            return {"status": "dry-run", "command": command_str, "run": run}
+
+        if flux is None:
+            raise ConfigError("The `sh` library is required to submit Flux jobs (pip install sh).")
+
+        attempt = 0
+        last_error: Optional[str] = None
+        attempts_total = retries + 1
+        while attempt <= retries:
+            try:
+                env = os.environ.copy()
+                env.update(run.flux_env)
+                if verbose:
+                    attempt_suffix = (
+                        f" (attempt {attempt + 1}/{attempts_total})" if attempts_total > 1 else ""
+                    )
+                    click.echo(f"Submitting: {command_str}{attempt_suffix}")
+                submission = flux(
+                    *flux_command,
+                    _env=env,
+                    _cwd=str(run.cwd),
+                )
+                jobid = str(submission).strip()
+                return {
+                    "status": "submitted",
+                    "jobid": jobid,
+                    "command": command_str,
+                    "run": run,
+                }
+            except ErrorReturnCode as exc:  # pragma: no cover - flux handles this
+                last_error = exc.stderr.decode() if hasattr(exc, "stderr") else str(exc)
+                attempt += 1
+                if attempt > retries:
+                    return {
+                        "status": "failed",
+                        "error": last_error or "flux submit failed",
+                        "command": command_str,
+                        "run": run,
+                    }
+
+        return {
+            "status": "failed",
+            "error": last_error or "Unknown submission failure",
+            "command": command_str,
+            "run": run,
+        }
+
+    # Slurm path
+    # Build --export list so that job inherits required env vars regardless of site defaults
+    export_kv = [f"{k}={v}" for k, v in run.flux_env.items()]
+    export_arg = "ALL" + ("," + ",".join(export_kv) if export_kv else "")
+
+    slurm_command: List[str] = [
         *sanitized_flags,
         "--output",
         str(stdouterr_path),
         "--error",
         str(stdouterr_path),
-        "bash",
-        "-lc",
-        activation_cmd,
+        "--parsable",
+        "--chdir",
+        str(run.cwd),
+        "--export",
+        export_arg,
+        "--wrap",
+        f"bash -lc {shlex.quote(activation_cmd)}",
     ]
-    command_str = _format_flux_command(flux_command)
+    command_str = _format_command("sbatch", slurm_command)
 
     if dry_run:
         if verbose:
             click.echo(f"[DRY-RUN] {command_str}")
         return {"status": "dry-run", "command": command_str, "run": run}
 
-    if flux is None:
-        raise ConfigError("The `sh` library is required to submit jobs (pip install sh).")
+    if sbatch is None:
+        raise ConfigError("The `sh` library is required to submit Slurm jobs (pip install sh).")
 
     attempt = 0
     last_error: Optional[str] = None
     attempts_total = retries + 1
     while attempt <= retries:
         try:
-            env = os.environ.copy()
-            env.update(run.flux_env)
+            # Use the current environment for submission; job env handled via --export
             if verbose:
                 attempt_suffix = (
                     f" (attempt {attempt + 1}/{attempts_total})" if attempts_total > 1 else ""
                 )
                 click.echo(f"Submitting: {command_str}{attempt_suffix}")
-            submission = flux(
-                *flux_command,
-                _env=env,
+            submission = sbatch(
+                *slurm_command,
+                _env=os.environ.copy(),
                 _cwd=str(run.cwd),
             )
             jobid = str(submission).strip()
             return {"status": "submitted", "jobid": jobid, "command": command_str, "run": run}
-        except ErrorReturnCode as exc:  # pragma: no cover - flux handles this
+        except ErrorReturnCode as exc:  # pragma: no cover - slurm handles this
             last_error = exc.stderr.decode() if hasattr(exc, "stderr") else str(exc)
             attempt += 1
             if attempt > retries:
                 return {
                     "status": "failed",
-                    "error": last_error or "flux submit failed",
+                    "error": last_error or "sbatch failed",
                     "command": command_str,
                     "run": run,
                 }
@@ -425,10 +557,11 @@ def _format_run_summary(result: Dict[str, Optional[str]]) -> str:
     help="Override the results directory.",
 )
 @click.option("--reps", "reps_override", type=int, help="Override repetitions passed to driver.py.")
-@click.option("--dry-run", is_flag=True, help="Print flux commands without submitting them.")
+@click.option("--scheduler", "scheduler_override", type=click.Choice(["flux", "slurm"]), help="Override scheduler backend.")
+@click.option("--dry-run", is_flag=True, help="Print scheduler commands without submitting them.")
 @click.option("--force", is_flag=True, help="Submit even if results already exist.")
 @click.option("--retries", default=0, show_default=True, type=int, help="Retry failed submissions.")
-@click.option("--verbose", "-v", is_flag=True, help="Print flux submit commands as they run.")
+@click.option("--verbose", "-v", is_flag=True, help="Print submission commands as they run.")
 def main(
     config_path: Path,
     descriptor_override: Optional[str],
@@ -438,12 +571,13 @@ def main(
     prof_modes_override: Sequence[str],
     result_root_override: Optional[str],
     reps_override: Optional[int],
+    scheduler_override: Optional[str],
     dry_run: bool,
     force: bool,
     retries: int,
     verbose: bool,
 ) -> None:
-    """Submit driver.py workflows to Flux."""
+    """Submit driver.py workflows to Flux or Slurm."""
     try:
         config_data = load_workflow_config(config_path)
         run_specs, results_dir = build_run_specs(
@@ -456,6 +590,7 @@ def main(
             prof_modes_override=prof_modes_override,
             result_root_override=result_root_override,
             reps_override=reps_override,
+            scheduler_override=scheduler_override,
         )
     except ConfigError as exc:
         raise SystemExit(f"Configuration error: {exc}") from exc
