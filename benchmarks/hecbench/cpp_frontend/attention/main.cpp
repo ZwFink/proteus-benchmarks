@@ -6,15 +6,19 @@
 #include <memory>
 #include <string>
 #include <string_view>
-#include <hip/hip_runtime.h>
+#include "../../../gpu/gpu_common.h"
 #include <proteus/CppJitModule.hpp>
 #include "inja/inja.h"
-#include "../../../gpu/gpu_common.h"
 
 using namespace proteus;
 
-#define TARGET "hip"
-#define INCLUDE "#include <hip/hip_runtime.h>"
+#if PROTEUS_ENABLE_HIP
+#define DEVICE_INCLUDE "#include <hip/hip_runtime.h>"
+#elif PROTEUS_ENABLE_CUDA
+#define DEVICE_INCLUDE "#include <cuda_runtime.h>"
+#else
+#error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA defined"
+#endif
 
 float* attention_host(const float* key, const float* value, const float* query,
   const int n, const int d)
@@ -52,7 +56,7 @@ return output;
 }
 
 // Kernel template for attention_kernel1
-constexpr std::string_view StrAttentionKernel1Template = INCLUDE R"cpp(
+constexpr std::string_view StrAttentionKernel1Template = DEVICE_INCLUDE R"cpp(
 extern "C" __global__ void attention_kernel1(
     const float* __restrict__ key,
     const float* __restrict__ query,
@@ -73,7 +77,7 @@ extern "C" __global__ void attention_kernel1(
 )cpp";
 
 // Kernel template for attention_kernel2
-constexpr std::string_view StrAttentionKernel2Template = INCLUDE R"cpp(
+constexpr std::string_view StrAttentionKernel2Template = DEVICE_INCLUDE R"cpp(
 extern "C" __global__ void attention_kernel2(
     const float* __restrict__ exp_sum,
     const float* __restrict__ dot_product,
@@ -87,7 +91,7 @@ extern "C" __global__ void attention_kernel2(
 )cpp";
 
 // Kernel template for attention_kernel3
-constexpr std::string_view StrAttentionKernel3Template = INCLUDE R"cpp(
+constexpr std::string_view StrAttentionKernel3Template = DEVICE_INCLUDE R"cpp(
 extern "C" __global__ void attention_kernel3(
     const float* __restrict__ score,
     const float* __restrict__ value,
@@ -140,33 +144,33 @@ float* attention_device(const float* key, const float* value, const float* query
 {
   // input
   float *d_key;
-  gpuErrCheck(hipMalloc((void**)&d_key, n * d * sizeof(float)));
-  gpuErrCheck(hipMemcpy(d_key, key, n * d * sizeof(float), hipMemcpyHostToDevice));
+  gpuErrCheck(gpuMalloc((void**)&d_key, n * d * sizeof(float)));
+  gpuErrCheck(gpuMemcpy(d_key, key, n * d * sizeof(float), gpuMemcpyHostToDevice));
 
   float *d_value;
-  gpuErrCheck(hipMalloc((void**)&d_value, n * d * sizeof(float)));
-  gpuErrCheck(hipMemcpy(d_value, value, n * d * sizeof(float), hipMemcpyHostToDevice));
+  gpuErrCheck(gpuMalloc((void**)&d_value, n * d * sizeof(float)));
+  gpuErrCheck(gpuMemcpy(d_value, value, n * d * sizeof(float), gpuMemcpyHostToDevice));
 
   float *d_query;
-  gpuErrCheck(hipMalloc((void**)&d_query, d * sizeof(float)));
-  gpuErrCheck(hipMemcpy(d_query, query, d * sizeof(float), hipMemcpyHostToDevice));
+  gpuErrCheck(gpuMalloc((void**)&d_query, d * sizeof(float)));
+  gpuErrCheck(gpuMemcpy(d_query, query, d * sizeof(float), gpuMemcpyHostToDevice));
 
   // intermediate
   float *d_dot_product;
-  gpuErrCheck(hipMalloc((void**)&d_dot_product, n * sizeof(float)));
+  gpuErrCheck(gpuMalloc((void**)&d_dot_product, n * sizeof(float)));
 
   float *d_exp_sum;
-  gpuErrCheck(hipMalloc((void**)&d_exp_sum, sizeof(float)));
+  gpuErrCheck(gpuMalloc((void**)&d_exp_sum, sizeof(float)));
 
   // result
   float *output = (float*) malloc (d * sizeof(float));
   float *d_output;
-  gpuErrCheck(hipMalloc((void**)&d_output, d * sizeof(float)));
+  gpuErrCheck(gpuMalloc((void**)&d_output, d * sizeof(float)));
 
   float *d_score;
-  gpuErrCheck(hipMalloc((void**)&d_score, n * sizeof(float)));
+  gpuErrCheck(gpuMalloc((void**)&d_score, n * sizeof(float)));
 
-  gpuErrCheck(hipDeviceSynchronize());
+  gpuErrCheck(gpuDeviceSynchronize());
 
   // Get kernels with specialized n and d values
   auto [JitMod1, Kernel1] = getAttentionKernel1(n, d);
@@ -177,7 +181,7 @@ float* attention_device(const float* key, const float* value, const float* query
 
   for (int k = 0; k < repeat; k++) {
     if(verify) {
-      gpuErrCheck(hipMemset(d_exp_sum, 0, 4));
+      gpuErrCheck(gpuMemset(d_exp_sum, 0, sizeof(float)));
     }
     Kernel1.launch({static_cast<unsigned int>((n+255)/256), 1, 1},
                    {256, 1, 1},
@@ -190,19 +194,19 @@ float* attention_device(const float* key, const float* value, const float* query
                    0, nullptr, d_score, d_value, d_output);
   }
 
-  gpuErrCheck(hipDeviceSynchronize());
+  gpuErrCheck(gpuDeviceSynchronize());
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time of kernels %f (ms)\n", time * 1e-6f / repeat);
 
-  gpuErrCheck(hipMemcpy(output, d_output, d * sizeof(float), hipMemcpyDeviceToHost));
-  gpuErrCheck(hipFree(d_score));
-  gpuErrCheck(hipFree(d_value));
-  gpuErrCheck(hipFree(d_output));
-  gpuErrCheck(hipFree(d_key));
-  gpuErrCheck(hipFree(d_dot_product));
-  gpuErrCheck(hipFree(d_exp_sum));
-  gpuErrCheck(hipFree(d_query));
+  gpuErrCheck(gpuMemcpy(output, d_output, d * sizeof(float), gpuMemcpyDeviceToHost));
+  gpuErrCheck(gpuFree(d_score));
+  gpuErrCheck(gpuFree(d_value));
+  gpuErrCheck(gpuFree(d_output));
+  gpuErrCheck(gpuFree(d_key));
+  gpuErrCheck(gpuFree(d_dot_product));
+  gpuErrCheck(gpuFree(d_exp_sum));
+  gpuErrCheck(gpuFree(d_query));
   return output;
 }
 

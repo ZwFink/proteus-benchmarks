@@ -13,12 +13,18 @@
 using namespace proteus;
 #include "../../../gpu/gpu_common.h"
 
+#if PROTEUS_ENABLE_HIP
 constexpr const char *kDeviceInclude = "#include <hip/hip_runtime.h>";
+#elif PROTEUS_ENABLE_CUDA
+constexpr const char *kDeviceInclude = "#include <cuda_runtime.h>";
+#else
+#error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA defined"
+#endif
 
 constexpr int MatmulTileSize = 16;
-constexpr std::string_view StrHipNontiledMatmulKernelTemplate = R"cpp(
+constexpr std::string_view StrGpuNontiledMatmulKernelTemplate = R"cpp(
 {{ include }}
-extern "C" __global__ void hipNontiledMatmulKernel(const double * A,
+extern "C" __global__ void gpuNontiledMatmulKernel(const double * A,
                                               const double * B,
                                               double * C) {
   constexpr int N = {{ N }};
@@ -37,8 +43,9 @@ extern "C" __global__ void hipNontiledMatmulKernel(const double * A,
   }
 }
 )cpp";
-// Non-tiled (naive) HIP kernel for matrix multiplication: C = A * B
-__global__ void hipNontiledMatmulKernelstatic (const double * __restrict__ A,
+#if PROTEUS_ENABLE_HIP
+// Non-tiled (naive) GPU kernel for matrix multiplication: C = A * B
+__global__ void gpuNontiledMatmulKernelStatic (const double * __restrict__ A,
                                            const double * __restrict__ B,
                                            double * __restrict__ C,
                                            int N) {
@@ -57,7 +64,7 @@ __global__ void hipNontiledMatmulKernelstatic (const double * __restrict__ A,
   }
 }
 
-static inline void hipNontiledMatmulLaunch(const double *A,
+static inline void gpuNontiledMatmulLaunch(const double *A,
                                               const double *B,
                                               double *C,
                                               int N) {
@@ -65,20 +72,21 @@ static inline void hipNontiledMatmulLaunch(const double *A,
   dim3 Grid((N + Block.x - 1) / Block.x,
             (N + Block.y - 1) / Block.y,
             1);
-  hipNontiledMatmulKernelstatic<<<Grid, Block>>>(A, B, C, N);
+  gpuNontiledMatmulKernelStatic<<<Grid, Block>>>(A, B, C, N);
 }
+#endif
 
 
-// HIP kernel: Register + shared-memory tiled matmul (C = A x B)
+// GPU kernel: Register + shared-memory tiled matmul (C = A x B)
 // Defaults match pj-dsl structure (constexpr, not macros)
 constexpr int RegTileM = 4;
 constexpr int RegTileN = 4;
 constexpr int BlockTileM = 64;
 constexpr int BlockTileN = 64;
 constexpr int KTile = 8;
-constexpr std::string_view StrHipRegSharedTiledMatmulKernelTemplate = R"cpp(
+constexpr std::string_view StrGpuRegSharedTiledMatmulKernelTemplate = R"cpp(
 {{ include }}
-extern "C" __global__ void hipRegSharedTiledMatmulKernel(const double * A,
+extern "C" __global__ void gpuRegSharedTiledMatmulKernel(const double * A,
                                               const double * B,
                                               double * C) {
   // Shared tiles for current K-slice via dynamic shared memory
@@ -216,9 +224,9 @@ static auto getRegSharedTiledMatMulKernel(int N)
     {"RegTileM", RegTileM},
     {"RegTileN", RegTileN}
   };
-  auto KernelStr = inja::render(std::string{StrHipRegSharedTiledMatmulKernelTemplate}, data);
-  auto JitMod = std::make_unique<CppJitModule>("hip", KernelStr);
-  auto Kernel = JitMod->getKernel<void(const double *, const double *, double *)>("hipRegSharedTiledMatmulKernel");
+  auto KernelStr = inja::render(std::string{StrGpuRegSharedTiledMatmulKernelTemplate}, data);
+  auto JitMod = std::make_unique<CppJitModule>(TARGET, KernelStr);
+  auto Kernel = JitMod->getKernel<void(const double *, const double *, double *)>("gpuRegSharedTiledMatmulKernel");
   return std::make_pair(std::move(JitMod), Kernel);
 }
 
@@ -228,9 +236,9 @@ static auto getNontiledMatMulKernel(int N)
     {"include", std::string{kDeviceInclude}},
     {"N", N}
   };
-  auto KernelStr = inja::render(std::string{StrHipNontiledMatmulKernelTemplate}, data);
-  auto JitMod = std::make_unique<CppJitModule>("hip", KernelStr);
-  auto Kernel = JitMod->getKernel<void(const double *, const double *, double *)>("hipNontiledMatmulKernel");
+  auto KernelStr = inja::render(std::string{StrGpuNontiledMatmulKernelTemplate}, data);
+  auto JitMod = std::make_unique<CppJitModule>(TARGET, KernelStr);
+  auto Kernel = JitMod->getKernel<void(const double *, const double *, double *)>("gpuNontiledMatmulKernel");
   return std::make_pair(std::move(JitMod), Kernel);
 }
 
@@ -268,9 +276,9 @@ int main(int argc, char** argv) {
     } else if (!std::strcmp(argv[i], "--kernel")) {
       if (i + 1 < argc) {
         KernelType = argv[++i];
-        if (KernelType != "hip" && KernelType != "gpu_regtiled") {
+        if (KernelType != "hip" && KernelType != "gpu_naive" && KernelType != "gpu_regtiled") {
           std::cerr << "Error: Invalid kernel type '" << KernelType
-                    << "'. Valid options: hip, gpu_regtiled\n";
+                    << "'. Valid options: hip (alias for gpu_naive), gpu_naive, gpu_regtiled\n";
           return 1;
         }
       }
@@ -282,8 +290,8 @@ int main(int argc, char** argv) {
       std::cout << "Usage: " << argv[0]
                 << " [-n|--N N] [-t|--trials T] [--kernel KERNEL] [--verify|--no-verify]"
                 << " [blockTileM blockTileN kTile]\n"
-                << "  KERNEL: hip, gpu_regtiled (default: gpu_regtiled)\n"
-                << "  Positional tile sizes are used for the HIP reg-tiled kernel;"
+                << "  KERNEL: hip (alias of gpu_naive), gpu_naive, gpu_regtiled (default: gpu_regtiled)\n"
+                << "  Positional tile sizes are used for the reg-tiled kernel;"
                 << " defaults are " << BlockTileM << " " << BlockTileN << " " << KTile << "\n";
       return 0;
     } else {
@@ -305,7 +313,7 @@ int main(int argc, char** argv) {
   // Warn if runtime tile args differ from compile-time constants (HIP kernel is static)
   if (KernelType == "gpu_regtiled") {
     if (blockTileMArg != BlockTileM || blockTileNArg != BlockTileN || kTileArg != KTile) {
-      std::cerr << "Warning: HIP reg-tiled kernel uses compile-time tile sizes; ignoring positional values. Using blkM="
+      std::cerr << "Warning: Reg-tiled kernel uses compile-time tile sizes; ignoring positional values. Using blkM="
                 << BlockTileM << ", blkN=" << BlockTileN << ", k=" << KTile << "\n";
     }
   }
@@ -364,7 +372,7 @@ int main(int argc, char** argv) {
     std::cerr.precision(3);
     std::cerr << "Average over " << NumTrials << " trials: " << AvgMs << " ms" << '\n';
 
-  } else if (KernelType == "hip") {
+  } else if (KernelType == "hip" || KernelType == "gpu_naive") {
     auto [JitModNT, KernelNT] = getNontiledMatMulKernel(N);
     unsigned int blockX = static_cast<unsigned int>(MatmulTileSize);
     unsigned int blockY = static_cast<unsigned int>(MatmulTileSize);

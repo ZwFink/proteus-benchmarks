@@ -23,7 +23,13 @@
 
 using namespace proteus;
 
-#define INCLUDE_HEADER "#include <hip/hip_runtime.h>"
+#if PROTEUS_ENABLE_HIP
+constexpr const char *kDeviceInclude = "#include <hip/hip_runtime.h>";
+#elif PROTEUS_ENABLE_CUDA
+constexpr const char *kDeviceInclude = "#include <cuda_runtime.h>";
+#else
+#error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA to be defined"
+#endif
 
 struct Params {
   size_t natlig;
@@ -502,7 +508,7 @@ std::vector<float> runKernel(const Params &params) {
   dim3 block(params.wgSize);
 
   inja::json data = {
-      {"include", std::string(INCLUDE_HEADER)},
+      {"include", std::string(kDeviceInclude)},
       {"max_ppwi", MAX_PPWI},
       {"posesPerWI", params.posesPerWI},
       {"nposes", params.nposes},

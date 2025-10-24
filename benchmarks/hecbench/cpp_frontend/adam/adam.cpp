@@ -14,8 +14,13 @@
 
 using namespace proteus;
 
-#define TARGET "hip"
-#define INCLUDE "#include <hip/hip_runtime.h>"
+#if PROTEUS_ENABLE_HIP
+constexpr const char *kDeviceInclude = "#include <hip/hip_runtime.h>";
+#elif PROTEUS_ENABLE_CUDA
+constexpr const char *kDeviceInclude = "#include <cuda_runtime.h>";
+#else
+#error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA defined"
+#endif
 
 typedef enum {
   ADAM_MODE_0 = 0, // eps under square root
@@ -125,7 +130,7 @@ int main(int argc, char *argv[]) {
   gpuErrCheck(gpuDeviceSynchronize());
 
   inja::json data = {
-      {"include", std::string(INCLUDE)},
+      {"include", std::string(kDeviceInclude)},
       {"time_loop_start", 1},
       {"b1", beta1},
       {"b2", beta2},
@@ -137,15 +142,6 @@ int main(int argc, char *argv[]) {
       {"decay", decay},
       {"threadsPerBlock", threadsPerBlock}
   };
-  data["b1"] = beta1;
-  data["b2"] = beta2;
-  data["eps"] = eps;
-  data["grad_scale"] = grad_scale;
-  data["step_size"] = step_size;
-  data["time_step"] = time_step;
-  data["vector_size"] = vector_size;
-  data["decay"] = decay;
-  data["threadsPerBlock"] = threadsPerBlock;
   auto kernelSource = inja::render(std::string{StrAdamKernelTemplate}, data);
 
   CppJitModule CJM{TARGET, kernelSource};

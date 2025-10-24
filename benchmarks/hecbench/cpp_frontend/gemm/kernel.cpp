@@ -1,5 +1,5 @@
-#include <hip/hip_runtime.h>
-extern "C" __global__ void hipRegSharedTiledMatmulKernel(const double * A,
+#include "../../../gpu/gpu_common.h"
+extern "C" __global__ void gpuRegSharedTiledMatmulKernel(const double * A,
                                               const double * B,
                                               double * C) {
   // Shared tiles for current K-slice via dynamic shared memory
