@@ -2,7 +2,6 @@
 # User Options
 ###############################################################################
 
-# Compiler can be set below, or via environment variable
 CC              = ${PROTEUS_CC}
 OPTIMIZE        = yes
 DEBUG           = no
@@ -18,16 +17,14 @@ CUDA_ARCH       ?= sm_90
 # Program name & source code list
 ###############################################################################
 
-program = minibude-cpp-frontend-proteus.x
+program = conv3d-cpp-frontend-proteus.x
 
 source = main.cpp
-
 obj = $(source:.cpp=.o)
 
 ###############################################################################
 # Flags
 ###############################################################################
-
 HIP_CLANG_LIBS = -lclangAPINotes -lclangARCMigrate -lclangAST -lclangASTMatchers -lclangAnalysis \
 -lclangAnalysisFlowSensitive -lclangAnalysisFlowSensitiveModels -lclangApplyReplacements -lclangBasic -lclangChangeNamespace \
 -lclangCodeGen -lclangCrossTU -lclangDaemon -lclangDaemonTweaks -lclangDependencyScanning \
@@ -52,7 +49,7 @@ CUDA_CLANG_LIBS = -lclang-cpp
 COMMON_CFLAGS = $(EXTRA_CFLAGS) -std=c++17 -Wall \
 	-I${PROTEUS_PATH}/include \
 	-I${LLVM_INSTALL_DIR}/include \
-	-I${PWD}/../../lib/ \
+	-I${PWD}/../lib/ \
 	$(shell ${LLVM_CONFIG} --cxxflags | sed 's/-fno-exceptions//g') \
 	-fexceptions
 
@@ -116,6 +113,5 @@ $(program): $(obj) Makefile
 clean:
 	rm -rf $(program) *.o .proteus
 
-# Default run (matches hecbench configuration)
 run: $(program)
-	./$(program) --deck ../../../hecbench/data/minibude/bm2 --wgsize 256 --iterations 5
+	./$(program) 32 96 256 26 26 5 100

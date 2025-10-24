@@ -2,6 +2,7 @@
 # User Options
 ###############################################################################
 
+# Compiler can be set below, or via environment variable
 CC              = ${PROTEUS_CC}
 OPTIMIZE        = yes
 DEBUG           = no
@@ -17,7 +18,7 @@ CUDA_ARCH       ?= sm_90
 # Program name & source code list
 ###############################################################################
 
-program = conv3d-cpp-frontend-proteus.x
+program = attention-cpp-frontend-proteus.x
 
 source = main.cpp
 obj = $(source:.cpp=.o)
@@ -49,7 +50,7 @@ CUDA_CLANG_LIBS = -lclang-cpp
 COMMON_CFLAGS = $(EXTRA_CFLAGS) -std=c++17 -Wall \
 	-I${PROTEUS_PATH}/include \
 	-I${LLVM_INSTALL_DIR}/include \
-	-I${PWD}/../../lib/ \
+	-I${PWD}/../lib/ \
 	$(shell ${LLVM_CONFIG} --cxxflags | sed 's/-fno-exceptions//g') \
 	-fexceptions
 
@@ -89,11 +90,13 @@ else
   $(error Unknown GPU_BACKEND '$(GPU_BACKEND)'; expected hip or cuda)
 endif
 
+# Debug Flags
 ifeq ($(DEBUG),yes)
   CFLAGS += -g
   LDFLAGS += -g
 endif
 
+# Optimization Flags
 ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3
 endif
@@ -113,5 +116,6 @@ $(program): $(obj) Makefile
 clean:
 	rm -rf $(program) *.o .proteus
 
+# Default run
 run: $(program)
-	./$(program) 32 96 256 26 26 5 100
+	./$(program) 65536 2048 100

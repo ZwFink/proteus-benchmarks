@@ -18,7 +18,7 @@ CUDA_ARCH       ?= sm_90
 # Program name & source code list
 ###############################################################################
 
-program = bezier-surface-cpp-frontend-proteus.x
+program = 3mm-cpp-proteus.x
 
 source = main.cpp
 obj = $(source:.cpp=.o)
@@ -26,7 +26,6 @@ obj = $(source:.cpp=.o)
 ###############################################################################
 # Flags
 ###############################################################################
-
 HIP_CLANG_LIBS = -lclangAPINotes -lclangARCMigrate -lclangAST -lclangASTMatchers -lclangAnalysis \
 -lclangAnalysisFlowSensitive -lclangAnalysisFlowSensitiveModels -lclangApplyReplacements -lclangBasic -lclangChangeNamespace \
 -lclangCodeGen -lclangCrossTU -lclangDaemon -lclangDaemonTweaks -lclangDependencyScanning \
@@ -48,10 +47,10 @@ HIP_CLANG_LIBS = -lclangAPINotes -lclangARCMigrate -lclangAST -lclangASTMatchers
 
 CUDA_CLANG_LIBS = -lclang-cpp
 
-COMMON_CFLAGS = $(EXTRA_CFLAGS) -std=c++17 -Wall \
+COMMON_CFLAGS = $(EXTRA_CFLAGS) -std=c++20 -Wall \
 	-I${PROTEUS_PATH}/include \
 	-I${LLVM_INSTALL_DIR}/include \
-	-I${PWD}/../../lib/ \
+	-I${PWD}/../lib/ \
 	$(shell ${LLVM_CONFIG} --cxxflags | sed 's/-fno-exceptions//g') \
 	-fexceptions
 
@@ -77,7 +76,6 @@ CUDA_LDFLAGS = $(COMMON_LDFLAGS) \
 	-L/usr/lib64 -Wl,-rpath,/usr/lib64 \
 	-lcudart -lnvrtc -lcuda -lnvptxcompiler_static -lnvJitLink \
 	$(CUDA_CLANG_LIBS)
-CUDA_LANG_FLAG :=
 
 ifeq ($(GPU_BACKEND),hip)
   CFLAGS := $(HIP_CFLAGS)
@@ -112,11 +110,14 @@ $(program): $(obj) Makefile
 %.o: %.cpp Makefile
 	$(CC) $(CFLAGS) $(LANG_FLAG) -c $< -o $@
 
-.PHONY: clean run
+.PHONY: clean run run_tiled
 
 clean:
 	rm -rf $(program) *.o .proteus
 
 # Default run (matches defaults in main.cpp)
 run: $(program)
-	./$(program) -n 8192
+	./$(program) --no-verify --N 8192 --kernel gpu_regtiled
+
+run_tiled: $(program)
+	./$(program) --no-verify --N 8192 --kernel gpu_regtiled

@@ -18,7 +18,7 @@ CUDA_ARCH       ?= sm_90
 # Program name & source code list
 ###############################################################################
 
-program = floyd-warshall-cpp-frontend-proteus.x
+program = gemm-cpp-proteus.x
 
 source = main.cpp
 obj = $(source:.cpp=.o)
@@ -50,7 +50,7 @@ CUDA_CLANG_LIBS = -lclang-cpp
 COMMON_CFLAGS = $(EXTRA_CFLAGS) -std=c++17 -Wall \
 	-I${PROTEUS_PATH}/include \
 	-I${LLVM_INSTALL_DIR}/include \
-	-I${PWD}/../../lib/ \
+	-I${PWD}/../lib/ \
 	$(shell ${LLVM_CONFIG} --cxxflags | sed 's/-fno-exceptions//g') \
 	-fexceptions
 
@@ -65,7 +65,7 @@ HIP_CFLAGS = $(COMMON_CFLAGS) -DPROTEUS_ENABLE_HIP \
 	$(HIPFLAGS)
 HIP_LDFLAGS = $(COMMON_LDFLAGS) \
 	-L${ROCM_PATH}/lib -Wl,-rpath,${ROCM_PATH}/lib \
-	-llldCommon -llldELF -lamdhip64 -lhiprtc -lhiprtc-builtins -lhiprand \
+	-llldCommon -llldELF -lamdhip64 -lhiprtc -lhiprtc-builtins \
 	$(HIP_CLANG_LIBS)
 HIP_LANG_FLAG := -x hip
 
@@ -74,9 +74,8 @@ CUDA_CFLAGS = $(COMMON_CFLAGS) -DPROTEUS_ENABLE_CUDA \
 CUDA_LDFLAGS = $(COMMON_LDFLAGS) \
 	-L${CUDA_PATH}/lib64 -Wl,-rpath,${CUDA_PATH}/lib64 \
 	-L/usr/lib64 -Wl,-rpath,/usr/lib64 \
-	-lcudart -lnvrtc -lcurand -lcuda -lnvptxcompiler_static -lnvJitLink \
+	-lcudart -lnvrtc -lcuda -lnvptxcompiler_static -lnvJitLink \
 	$(CUDA_CLANG_LIBS)
-CUDA_LANG_FLAG := -x cuda --cuda-gpu-arch=$(CUDA_ARCH) --cuda-path=${CUDA_PATH}
 
 ifeq ($(GPU_BACKEND),hip)
   CFLAGS := $(HIP_CFLAGS)
@@ -116,6 +115,9 @@ $(program): $(obj) Makefile
 clean:
 	rm -rf $(program) *.o .proteus
 
-# Default run (matches hecbench configuration): N=8192 nodes, 10 iterations, block size 16
+# Default run (matches defaults in main.cpp)
 run: $(program)
-	./$(program) 8192 10 16 0
+	./$(program) --no-verify --N 8192 --kernel gpu_regtiled
+
+run_tiled: $(program)
+	./$(program) --no-verify --N 8192 --kernel gpu_regtiled

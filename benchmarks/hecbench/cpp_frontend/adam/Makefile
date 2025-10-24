@@ -18,9 +18,9 @@ CUDA_ARCH       ?= sm_90
 # Program name & source code list
 ###############################################################################
 
-program = 3mm-cpp-proteus.x
+program = adam-cpp-proteus.x
 
-source = main.cpp
+source = adam.cpp
 obj = $(source:.cpp=.o)
 
 ###############################################################################
@@ -47,10 +47,10 @@ HIP_CLANG_LIBS = -lclangAPINotes -lclangARCMigrate -lclangAST -lclangASTMatchers
 
 CUDA_CLANG_LIBS = -lclang-cpp
 
-COMMON_CFLAGS = $(EXTRA_CFLAGS) -std=c++20 -Wall \
+COMMON_CFLAGS = $(EXTRA_CFLAGS) -std=c++17 -Wall \
 	-I${PROTEUS_PATH}/include \
 	-I${LLVM_INSTALL_DIR}/include \
-	-I${PWD}/../../lib/ \
+	-I${PWD}/../lib/ \
 	$(shell ${LLVM_CONFIG} --cxxflags | sed 's/-fno-exceptions//g') \
 	-fexceptions
 
@@ -110,14 +110,11 @@ $(program): $(obj) Makefile
 %.o: %.cpp Makefile
 	$(CC) $(CFLAGS) $(LANG_FLAG) -c $< -o $@
 
-.PHONY: clean run run_tiled
+.PHONY: clean run
 
 clean:
 	rm -rf $(program) *.o .proteus
 
-# Default run (matches defaults in main.cpp)
+# Default run
 run: $(program)
-	./$(program) --no-verify --N 8192 --kernel gpu_regtiled
-
-run_tiled: $(program)
-	./$(program) --no-verify --N 8192 --kernel gpu_regtiled
+	./$(program) 160000 1600 1000

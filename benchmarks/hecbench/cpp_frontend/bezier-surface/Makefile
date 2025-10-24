@@ -18,7 +18,7 @@ CUDA_ARCH       ?= sm_90
 # Program name & source code list
 ###############################################################################
 
-program = attention-cpp-frontend-proteus.x
+program = bezier-surface-cpp-frontend-proteus.x
 
 source = main.cpp
 obj = $(source:.cpp=.o)
@@ -26,6 +26,7 @@ obj = $(source:.cpp=.o)
 ###############################################################################
 # Flags
 ###############################################################################
+
 HIP_CLANG_LIBS = -lclangAPINotes -lclangARCMigrate -lclangAST -lclangASTMatchers -lclangAnalysis \
 -lclangAnalysisFlowSensitive -lclangAnalysisFlowSensitiveModels -lclangApplyReplacements -lclangBasic -lclangChangeNamespace \
 -lclangCodeGen -lclangCrossTU -lclangDaemon -lclangDaemonTweaks -lclangDependencyScanning \
@@ -50,7 +51,7 @@ CUDA_CLANG_LIBS = -lclang-cpp
 COMMON_CFLAGS = $(EXTRA_CFLAGS) -std=c++17 -Wall \
 	-I${PROTEUS_PATH}/include \
 	-I${LLVM_INSTALL_DIR}/include \
-	-I${PWD}/../../lib/ \
+	-I${PWD}/../lib/ \
 	$(shell ${LLVM_CONFIG} --cxxflags | sed 's/-fno-exceptions//g') \
 	-fexceptions
 
@@ -116,6 +117,6 @@ $(program): $(obj) Makefile
 clean:
 	rm -rf $(program) *.o .proteus
 
-# Default run
+# Default run (matches defaults in main.cpp)
 run: $(program)
-	./$(program) 65536 2048 100
+	./$(program) -n 8192
