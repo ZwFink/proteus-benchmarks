@@ -1,7 +1,7 @@
 MPI_FLAGS = 
 
 CC?=nvcc
-ARCH=sm_70
+ARCH?=sm_90
 FLAGS	= 
 DFLAGS	= $(MPI_FLAGS) -lineinfo
 RFLAGS 	= $(MPI_FLAGS) -O3 -DNDEBUG 
