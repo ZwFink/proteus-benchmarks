@@ -5,7 +5,7 @@
 CC        ?= ${PROTEUS_CC}
 OPTIMIZE  = yes
 DEBUG     = no
-ARCH      = sm_90
+ARCH      ?= sm_90
 LAUNCHER  =
 PROTEUS_PATH  ?= ${PROTEUS_INSTALL_PATH}
 ENABLE_PROTEUS ?= no

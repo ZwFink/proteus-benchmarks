@@ -1,7 +1,7 @@
 MPI_FLAGS =
 
 CC?= ${PROTEUS_CC}
-ARCH=sm_70
+ARCH?=sm_90
 PROTEUS_PATH ?= /path/to/proteus/install
 ENABLE_PROTEUS ?= no
 FLAGS	=

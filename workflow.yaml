@@ -1,3 +1,6 @@
+# Select scheduler backend: flux or slurm
+scheduler: slurm
+
 proteus:
   # Update these paths to match your Proteus install before running the workflow.
   path: /usr/workspace/fink12/proteus/proteus/install-tuolumne-rocm-6.4.0/
@@ -10,7 +13,6 @@ driver:
     proteus: presets/proteus.toml
     aot: presets/aot.toml
     dsl: presets/dsl.toml
-    aot: presets/aot.toml
     cpp: presets/cpp.toml
   results_dir: results/hecbench-proteus-testing
   reps: 5
@@ -19,9 +21,9 @@ workflow:
   benchmarks:
     - adam
     - attention
-      - conv3d
-      - gemm
-      - 3mm
+    - conv3d
+    - gemm
+    - 3mm
   execution_modes:
     - aot
     - proteus
@@ -32,6 +34,14 @@ workflow:
   prof_modes:
     - direct
 
+slurm:
+  options:
+    - --nodes=1
+    - --time=00:15:00
+    - --partition=pdebug
+    - --tasks-per-node=1
+    - --gpus-per-task=1
+  env: {}
 flux:
   options:
     - -N

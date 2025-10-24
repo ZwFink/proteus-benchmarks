@@ -6,7 +6,7 @@
 CC        ?= ${PROTEUS_CC}
 OPTIMIZE  = yes
 DEBUG     = no
-ARCH      = sm_70
+ARCH      ?= sm_90
 LAUNCHER  =
 
 #===============================================================================
