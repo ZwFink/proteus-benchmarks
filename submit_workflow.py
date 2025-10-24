@@ -109,6 +109,11 @@ class RunSpec:
             f"{_result_suffix(self.prof_mode)}.csv"
         )
 
+    def stdouterr_log(self) -> Path:
+        return self.results_dir / (
+            f"{self.machine}-{self.benchmark}-{self.exec_mode}-stdouterr.txt"
+        )
+
     def driver_command(self) -> List[str]:
         cmd = [
             "python3",
@@ -298,7 +303,41 @@ def submit_run(
     if result_csv.exists() and result_csv.stat().st_size > 0 and not force:
         return {"status": "skipped", "reason": "results-exist", "run": run}
 
-    flux_command = ["submit", *run.flux_flags, *run.driver_command()]
+    stdouterr_path = run.stdouterr_log()
+
+    sanitized_flags: List[str] = []
+    skip_next = False
+    for index, flag in enumerate(run.flux_flags):
+        if skip_next:
+            skip_next = False
+            continue
+        if flag in {"--output", "-o", "--error", "-e"}:
+            skip_next = True
+            continue
+        if flag.startswith("--output=") or flag.startswith("--error="):
+            continue
+        if flag.startswith("-o") and flag != "-o":
+            continue
+        if flag.startswith("-e") and flag != "-e":
+            continue
+        sanitized_flags.append(flag)
+
+    driver_cmd = run.driver_command()
+    parts: List[str] = []
+    parts.append(shlex.join(driver_cmd))
+    activation_cmd = " && ".join(p for p in parts if p)
+
+    flux_command = [
+        "submit",
+        *sanitized_flags,
+        "--output",
+        str(stdouterr_path),
+        "--error",
+        str(stdouterr_path),
+        "bash",
+        "-lc",
+        activation_cmd,
+    ]
     command_str = _format_flux_command(flux_command)
 
     if dry_run:

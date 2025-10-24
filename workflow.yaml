@@ -1,0 +1,42 @@
+proteus:
+  # Update these paths to match your Proteus install before running the workflow.
+  path: /usr/workspace/fink12/proteus/proteus/install-tuolumne-rocm-6.4.0/
+  cc: /opt/rocm-6.4.0/bin/hipcc
+
+driver:
+  # `driver.py` is resolved relative to this repo by default; override if needed.
+  descriptor: hecbench.toml
+  runconfigs:
+    proteus: presets/proteus.toml
+    aot: presets/aot.toml
+    dsl: presets/dsl.toml
+    aot: presets/aot.toml
+    cpp: presets/cpp.toml
+  results_dir: results/hecbench-proteus-testing
+  reps: 5
+
+workflow:
+  benchmarks:
+    - adam
+    - attention
+      - conv3d
+      - gemm
+      - 3mm
+  execution_modes:
+    - aot
+    - proteus
+    - dsl
+    - cpp
+  machines:
+    - amd
+  prof_modes:
+    - direct
+
+flux:
+  options:
+    - -N
+    - "1"
+    - --time=20m
+    - --queue=pdebug
+  env:
+    CPLUS_INCLUDE_PATH: /opt/rocm-6.4.0/include

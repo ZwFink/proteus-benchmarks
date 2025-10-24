@@ -258,7 +258,7 @@ exe = "bezier-surface-proteus.x"
 path = "benchmarks/hecbench/dsl/bezier-surface"
 exe = "bezier-surface-proteus.x"
 [hecbench.bezier-surface.inputs]
-default = "-n 8192"
+default = "-n 8192 -t 10"
 
 [hecbench.minibude]
 [hecbench.minibude.amd.aot]
