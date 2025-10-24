@@ -42,7 +42,7 @@ HIP_LDFLAGS = -L${ROCM_PATH}/lib -L${LLVM_INSTALL_DIR}/lib \
   $(CLANG_STATIC_LIBS) \
   $(shell ${LLVM_CONFIG} --libs) \
   -Wl,--end-group \
-  $(shell ${LLVM_CONFIG} --system-libs) -lclang-cpp \
+  $(shell ${LLVM_CONFIG} --system-libs) \
   -llldCommon -llldELF -lamdhip64 -lhiprtc -lhiprtc-builtins
 HIP_LANG_FLAG := -x hip
 
@@ -56,7 +56,7 @@ CUDA_LDFLAGS = -L${CUDA_PATH}/lib64 -Wl,-rpath,${CUDA_PATH}/lib64 \
   $(CLANG_STATIC_LIBS) \
   $(shell ${LLVM_CONFIG} --libs) \
   -Wl,--end-group \
-  $(shell ${LLVM_CONFIG} --system-libs) -lclang-cpp \
+  $(shell ${LLVM_CONFIG} --system-libs)  \
   -lcudart -lnvrtc -llldCommon -llldELF
 CUDA_LANG_FLAG :=
 
