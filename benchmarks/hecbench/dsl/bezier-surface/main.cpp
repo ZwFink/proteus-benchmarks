@@ -357,15 +357,11 @@ if (p.verify) {
 size_t in_size   = static_cast<size_t>(in_size_i + 1) * static_cast<size_t>(in_size_j + 1) * 3 * sizeof(float);
 size_t out_size  = out_elems * 3 * sizeof(float);
 
-auto create_jit_start = std::chrono::steady_clock::now();
+Timer T;
+T.reset();
 auto [J, KernelHandle] = createJitModule(in_size_i, in_size_j, out_size_i, out_size_j);
-auto create_jit_end = std::chrono::steady_clock::now();
+Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
 J->compile();
-auto compile_end = std::chrono::steady_clock::now();
-auto compile_time = std::chrono::duration<double, std::milli>(compile_end - create_jit_end).count();
-auto create_jit_time = std::chrono::duration<double, std::milli>(create_jit_end - create_jit_start).count();
-std::cout << "kernel creation time: " << std::fixed << std::setprecision(4) << create_jit_time << "ms" << std::endl;
-std::cout << "kernel compilation time: " << std::fixed << std::setprecision(4) << compile_time << "ms" << std::endl;
 
 // Trial loop
 std::vector<double> trial_times;

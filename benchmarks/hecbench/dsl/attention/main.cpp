@@ -8,6 +8,7 @@
 #include <proteus/JitFrontend.hpp>
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitInterface.hpp>
+#include <proteus/TimeTracing.hpp>
 
 using namespace proteus;
 using namespace builtins::gpu;
@@ -212,13 +213,15 @@ float* attention_device(float* key, float* value, float* query,
   gpuDeviceSynchronize();
 
   // Build and compile kernels
+  Timer T;
+  T.reset();
   auto [JitMod1, KernelHandle1] = getAttentionKernel1(n, d);
-  JitMod1->compile();
-
   auto [JitMod2, KernelHandle2] = getAttentionKernel2(n);
-  JitMod2->compile();
-
   auto [JitMod3, KernelHandle3] = getAttentionKernel3(n, d);
+  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
+
+  JitMod1->compile();
+  JitMod2->compile();
   JitMod3->compile();
 
   gpuDeviceSynchronize();

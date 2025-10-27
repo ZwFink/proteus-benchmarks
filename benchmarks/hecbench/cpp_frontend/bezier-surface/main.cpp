@@ -324,7 +324,8 @@ void run(float *in,
   size_t in_size   = static_cast<size_t>(in_size_i + 1) * static_cast<size_t>(in_size_j + 1) * 3 * sizeof(float);
   size_t out_size  = out_elems * 3 * sizeof(float);
 
-  auto kernel_create_start = std::chrono::steady_clock::now();
+  Timer T;
+  T.reset();
   inja::json data = {
       {"include", std::string{kDeviceInclude}},
       {"in_size_i", in_size_i},
@@ -335,15 +336,10 @@ void run(float *in,
 
   const std::string kernelSource = inja::render(std::string{StrBezierKernelTemplate}, data);
   CppJitModule module{TARGET, kernelSource};
-  auto kernel_create_end = std::chrono::steady_clock::now();
+  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
   module.compile();
   using KernelSig = void(const float *, float *);
   auto Kernel = module.getKernel<KernelSig>("BezierGPU");
-  auto compile_end = std::chrono::steady_clock::now();
-  auto compile_time = std::chrono::duration<double, std::milli>(compile_end - kernel_create_end).count();
-  auto kernel_create_time = std::chrono::duration<double, std::milli>(kernel_create_end - kernel_create_start).count();
-  std::cout << "kernel creation time: " << std::fixed << std::setprecision(4) << kernel_create_time << "ms" << std::endl;
-  std::cout << "kernel compilation time: " << std::fixed << std::setprecision(4) << compile_time << "ms" << std::endl;
 
   // Trial loop
   std::vector<double> trial_times;

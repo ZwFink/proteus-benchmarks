@@ -349,7 +349,11 @@ int main(int argc, char** argv) {
 
   // Kernel execution based on type
   if (KernelType == "gpu_regtiled") {
+    Timer specializeTimer;
+    specializeTimer.reset();
     auto [JitMod, Kernel] = getRegSharedTiledMatMulKernel(N);
+    Logger::outs("Proteus") << "Specialized Kernel Construction "
+                            << specializeTimer.elapsed() << " ms\n";
     Kernel.launch({static_cast<unsigned int>(N / BlockTileN), static_cast<unsigned int>(N / BlockTileM), 1},
                   {static_cast<unsigned int>(BlockTileN / RegTileN), static_cast<unsigned int>(BlockTileM / RegTileM), 1},
                   0, nullptr, AD, BD, CD);
@@ -373,7 +377,11 @@ int main(int argc, char** argv) {
     std::cerr << "Average over " << NumTrials << " trials: " << AvgMs << " ms" << '\n';
 
   } else if (KernelType == "hip" || KernelType == "gpu_naive") {
+    Timer specializeTimer;
+    specializeTimer.reset();
     auto [JitModNT, KernelNT] = getNontiledMatMulKernel(N);
+    Logger::outs("Proteus") << "Specialized Kernel Construction "
+                            << specializeTimer.elapsed() << " ms\n";
     unsigned int blockX = static_cast<unsigned int>(MatmulTileSize);
     unsigned int blockY = static_cast<unsigned int>(MatmulTileSize);
     unsigned int gridX = static_cast<unsigned int>((N + blockX - 1) / blockX);

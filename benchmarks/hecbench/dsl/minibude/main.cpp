@@ -20,6 +20,7 @@
 #include <proteus/JitFrontend.hpp>
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitInterface.hpp>
+#include <proteus/TimeTracing.hpp>
 
 #include "../../../gpu/gpu_common.h"
 #include "bude.h"
@@ -656,7 +657,10 @@ std::vector<float> runKernel(const Params &params) {
   gpuMalloc(reinterpret_cast<void **>(&results),
             params.nposes * sizeof(float));
 
+  Timer T;
+  T.reset();
   auto [JitMod, KernelHandle] = buildFastenKernel(params.posesPerWI, params.ntypes, params.nposes, params.natlig, params.natpro);
+  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
   JitMod->compile();
   // JitMod->print();
 

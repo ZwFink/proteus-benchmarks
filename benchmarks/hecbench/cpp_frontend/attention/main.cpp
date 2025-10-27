@@ -172,10 +172,14 @@ float* attention_device(const float* key, const float* value, const float* query
 
   gpuErrCheck(gpuDeviceSynchronize());
 
+  Timer specializeTimer;
+  specializeTimer.reset();
   // Get kernels with specialized n and d values
   auto [JitMod1, Kernel1] = getAttentionKernel1(n, d);
   auto [JitMod2, Kernel2] = getAttentionKernel2(n);
   auto [JitMod3, Kernel3] = getAttentionKernel3(n, d);
+  Logger::outs("Proteus") << "Specialized Kernel Construction "
+                          << specializeTimer.elapsed() << " ms\n";
 
   auto start = std::chrono::steady_clock::now();
 

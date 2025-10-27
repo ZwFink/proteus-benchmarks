@@ -1,6 +1,7 @@
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitFrontend.hpp>
 #include <proteus/JitInterface.hpp>
+#include <proteus/TimeTracing.hpp>
 
 #include <cassert>
 #include <chrono>
@@ -192,7 +193,10 @@ int main(int argc, char **argv) {
   gpuErrCheck(gpuMalloc(reinterpret_cast<void **>(&pathBuffer), matrixSizeBytes));
 
   // JIT compile kernel specialized for this numNodes
+  Timer T;
+  T.reset();
   auto [J, KernelHandle] = createJitModuleSpecial(static_cast<unsigned int>(numNodes));
+  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
   J->compile();
 
   // GPU RNG generator

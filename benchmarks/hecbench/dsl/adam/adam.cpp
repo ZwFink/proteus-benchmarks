@@ -1,5 +1,7 @@
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitFrontend.hpp>
+#include <proteus/JitInterface.hpp>
+#include <proteus/TimeTracing.hpp>
 
 #include <chrono>
 #include <iostream>
@@ -145,9 +147,12 @@ int main(int argc, char *argv[]) {
 
   adamMode_t mode = ADAM_MODE_0;
 
+  Timer T;
+  T.reset();
   auto [J, KernelHandle] =
       createJitModuleSpecial(beta1, beta2, eps, grad_scale, step_size,
                              time_step, vector_size, mode, decay);
+  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
 
   J->compile();
   

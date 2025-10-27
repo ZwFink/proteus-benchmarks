@@ -2,6 +2,7 @@
 #include <proteus/JitFrontend.hpp>
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitInterface.hpp>
+#include <proteus/TimeTracing.hpp>
 
 #include <cstdlib>
 #include <cstring>
@@ -346,8 +347,11 @@ int main(int argc, char** argv) {
 
   // Kernel execution based on type
   if (KernelType == "gpu_regtiled") {
+    Timer T;
+    T.reset();
     auto [JitMod, KernelHandle] = getRegSharedTiledMatmulKernel(N, blockTileMArg, blockTileNArg, kTileArg, RegTileM, RegTileN);
-    JitMod->compile(true);
+    Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
+    JitMod->compile();
     (void)KernelHandle.launch({static_cast<unsigned int>(N / blockTileNArg), static_cast<unsigned int>(N / blockTileMArg), 1u}, {static_cast<unsigned int>(blockTileNArg / RegTileN), static_cast<unsigned int>(blockTileMArg / RegTileM), 1u}, 0, nullptr, CD, AD, BD);
     gpuErrCheck(gpuDeviceSynchronize());
 
@@ -368,8 +372,11 @@ int main(int argc, char** argv) {
     std::cerr << "Average over " << NumTrials << " trials: " << AvgMs << " ms" << '\n';
 
   } else if (KernelType == "jit") {
+    Timer T;
+    T.reset();
     auto [JitMod, KernelHandle] = getMatmulKernel(N, MatmulTileSize);
-    JitMod->compile(true);
+    Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
+    JitMod->compile();
     (void)KernelHandle.launch({(N + MatmulTileSize - 1) / MatmulTileSize, (N + MatmulTileSize - 1) / MatmulTileSize, 1}, {MatmulTileSize, MatmulTileSize, 1}, 0, nullptr, CD, AD, BD);
     gpuErrCheck(gpuDeviceSynchronize());
 

@@ -188,7 +188,11 @@ int main(int argc, char** argv) {
   dim3 block(localThreadsX, localThreadsY);
 
   // JIT compile kernel specialized for this numNodes
+  Timer specializeTimer;
+  specializeTimer.reset();
   auto [JitMod, Kernel] = getFloydWarshallKernel(numNodes);
+  Logger::outs("Proteus") << "Specialized Kernel Construction "
+                          << specializeTimer.elapsed() << " ms\n";
 
   const size_t totalElements = static_cast<size_t>(numNodes) * static_cast<size_t>(numNodes);
   // Random number generator
