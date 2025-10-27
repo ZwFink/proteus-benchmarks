@@ -1,6 +1,7 @@
 #include <proteus/JitFrontend.hpp>
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitInterface.hpp>
+#include <proteus/TimeTracing.hpp>
 #include "../../../gpu/gpu_common.h"
 
 #include <cstdlib>
@@ -321,7 +322,10 @@ int main(int argc, char** argv) {
 
 
   if (KernelType == "gpu_regtiled") {
+    Timer T;
+    T.reset();
     auto [JitMod, KernelHandle] = getRegSharedTiledMatmulKernel(N, blockTileMArg, blockTileNArg, kTileArg, RegTileM, RegTileN);
+    Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
     JitMod->compile();
 
     unsigned int gridX = static_cast<unsigned int>(N / blockTileNArg);
@@ -352,7 +356,10 @@ int main(int argc, char** argv) {
     std::cerr << "Average over " << NumTrials << " trials (3 GEMMs): " << AvgMs << " ms" << '\n';
 
   } else {
+    Timer T;
+    T.reset();
     auto [JitMod, KernelHandle] = getMatmulKernel(N, MatmulTileSize);
+    Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
     JitMod->compile();
 
     unsigned int gridX = static_cast<unsigned int>((N + MatmulTileSize - 1) / MatmulTileSize);

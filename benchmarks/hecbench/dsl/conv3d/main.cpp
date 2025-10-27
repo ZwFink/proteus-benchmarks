@@ -17,6 +17,7 @@
 #include <proteus/JitFrontend.hpp>
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitInterface.hpp>
+#include <proteus/TimeTracing.hpp>
 #include "../../../gpu/gpu_common.h"
 
 using namespace proteus;
@@ -303,16 +304,18 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
   printf("3D grid dimensions: N=%d M=%d Z=%d\n", N, M, Z);
 
   // Build and compile kernels
+  Timer T;
+  T.reset();
   auto [JitMod1, KernelHandle1] =
       getConv3dS1Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
-  JitMod1->compile();
-
   auto [JitMod2, KernelHandle2] =
       getConv3dS2Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
-  JitMod2->compile();
-
   auto [JitMod3, KernelHandle3] =
       getConv3dS3Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
+  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
+
+  JitMod1->compile();
+  JitMod2->compile();
   JitMod3->compile();
 
   gpuErrCheck(gpuDeviceSynchronize());
