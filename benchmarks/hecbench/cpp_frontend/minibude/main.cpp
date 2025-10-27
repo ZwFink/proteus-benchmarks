@@ -507,6 +507,8 @@ std::vector<float> runKernel(const Params &params) {
   dim3 grid(global);
   dim3 block(params.wgSize);
 
+  Timer specializeTimer;
+  specializeTimer.reset();
   inja::json data = {
       {"include", std::string(kDeviceInclude)},
       {"max_ppwi", MAX_PPWI},
@@ -518,6 +520,8 @@ std::vector<float> runKernel(const Params &params) {
 
   std::string kernelSource = inja::render(std::string(StrFastenKernelTemplate), data);
   CppJitModule jitModule{TARGET, kernelSource};
+  Logger::outs("Proteus") << "Specialized Kernel Construction "
+                          << specializeTimer.elapsed() << " ms\n";
   jitModule.compile();
 
   using FastenSig = void(const float *, const float *, const float *,

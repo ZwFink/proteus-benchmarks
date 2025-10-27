@@ -289,7 +289,11 @@ int main(int argc, char** argv) {
   gpuErrCheck(gpuMemcpy(DD, DH, Bytes, gpuMemcpyHostToDevice));
 
   if (KernelType == "gpu_regtiled") {
+    Timer specializeTimer;
+    specializeTimer.reset();
     auto [JitMod, Kernel] = getRegSharedTiledMatMulKernel(N);
+    Logger::outs("Proteus") << "Specialized Kernel Construction "
+                            << specializeTimer.elapsed() << " ms\n";
 
     // Warm-up: E=A*B, F=C*D, G=E*F
     Kernel.launch({static_cast<unsigned int>(N / BlockTileN), static_cast<unsigned int>(N / BlockTileM), 1},
@@ -328,7 +332,11 @@ int main(int argc, char** argv) {
 
   } else {
     // KernelType is gpu_naive after normalization above.
+    Timer specializeTimer;
+    specializeTimer.reset();
     auto [JitModNT, KernelNT] = getNontiledMatMulKernel(N);
+    Logger::outs("Proteus") << "Specialized Kernel Construction "
+                            << specializeTimer.elapsed() << " ms\n";
     unsigned int blockX = static_cast<unsigned int>(MatmulTileSize);
     unsigned int blockY = static_cast<unsigned int>(MatmulTileSize);
     unsigned int gridX = static_cast<unsigned int>((N + blockX - 1) / blockX);

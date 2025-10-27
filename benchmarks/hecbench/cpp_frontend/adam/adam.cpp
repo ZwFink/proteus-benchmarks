@@ -129,6 +129,8 @@ int main(int argc, char *argv[]) {
 
   gpuErrCheck(gpuDeviceSynchronize());
 
+  Timer specializeTimer;
+  specializeTimer.reset();
   inja::json data = {
       {"include", std::string(kDeviceInclude)},
       {"time_loop_start", 1},
@@ -145,6 +147,8 @@ int main(int argc, char *argv[]) {
   auto kernelSource = inja::render(std::string{StrAdamKernelTemplate}, data);
 
   CppJitModule CJM{TARGET, kernelSource};
+  Logger::outs("Proteus") << "Specialized Kernel Construction "
+                          << specializeTimer.elapsed() << " ms\n";
 
   CJM.compile();
   using AdamSig = void(float *, float *, float *, const float *, adamMode_t);

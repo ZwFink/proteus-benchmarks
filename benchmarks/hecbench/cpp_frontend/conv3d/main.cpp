@@ -303,10 +303,14 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
 
   gpuErrCheck(gpuDeviceSynchronize());
 
+  Timer specializeTimer;
+  specializeTimer.reset();
   // Get kernels with specialized parameters
   auto [JitModS1, KernelS1] = getConv3dS1Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
   auto [JitModS2, KernelS2] = getConv3dS2Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
   auto [JitModS3, KernelS3] = getConv3dS3Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
+  Logger::outs("Proteus") << "Specialized Kernel Construction "
+                          << specializeTimer.elapsed() << " ms\n";
 
   // Test conv3d_s1 (grid organization: N, M, Z)
   auto start = std::chrono::steady_clock::now();
