@@ -31,7 +31,7 @@ class Rocprof:
     def __init__(self, metrics):
         self.metrics = metrics
         if metrics:
-            metrics_file = f"{__file__}/vis/rocprof-metrics.txt"
+            metrics_file = f"{Path(__file__).parent}/vis/rocprof-metrics.txt"
             self.command = f"rocprof -i {metrics_file}" + " --timestamp on -o {0} {1}"
         else:
             self.command = "rocprof --timestamp on -o {0} {1}"
