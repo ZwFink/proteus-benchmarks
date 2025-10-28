@@ -1,0 +1,59 @@
+# Select scheduler backend: flux or slurm
+scheduler: flux
+
+proteus:
+  # Update these paths to match your Proteus install before running the workflow.
+  path: /usr/workspace/fink12/proteus/proteus/install-tuolumne-rocm-6.4.0/
+  cc: /opt/rocm-6.4.0/bin/hipcc
+
+driver:
+  # `driver.py` is resolved relative to this repo by default; override if needed.
+  # Paths resolve to the location of this workflow file.
+  descriptor: hecbench.toml
+  runconfigs:
+    proteus: proteus.toml
+    dsl: dsl.toml
+    cpp: cpp.toml
+  results_dir: results_amd
+  # Do many reps (they will be fast) to get good timing data
+  reps: 20
+
+workflow:
+  benchmarks:
+    - 3mm
+    - adam
+    - attention
+    - bezier-surface
+    - conv3d
+    - gemm
+    - floyd-warshall
+    - minibude
+  execution_modes:
+    - proteus
+    - dsl
+    - cpp
+  machines:
+    - amd
+  prof_modes:
+    - direct
+  machine_setup:
+    amd: "source /usr/workspace/fink12/proteus/activate_tuolumne.sh"
+
+slurm:
+  options:
+    - --nodes=1
+    - --time=00:15:00
+    - --partition=pbatch
+    - --tasks-per-node=1
+    - --gpus-per-task=1
+    - --exclusive
+  env: {}
+flux:
+  options:
+    - -N
+    - "1"
+    - --time=15m
+    - --queue=pdebug
+    - --exclusive
+  env:
+    CPLUS_INCLUDE_PATH: /opt/rocm-6.4.0/include
