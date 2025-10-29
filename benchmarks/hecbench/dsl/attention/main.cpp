@@ -213,7 +213,7 @@ float* attention_device(float* key, float* value, float* query,
   gpuDeviceSynchronize();
 
   // Build and compile kernels
-  Timer T;
+  proteus::Timer T;
   T.reset();
   auto [JitMod1, KernelHandle1] = getAttentionKernel1(n, d);
   auto [JitMod2, KernelHandle2] = getAttentionKernel2(n);
