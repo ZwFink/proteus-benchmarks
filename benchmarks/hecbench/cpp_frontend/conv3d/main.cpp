@@ -189,6 +189,8 @@ extern "C" __global__ void conv3d_s3(const float * __restrict__ X,
 // Getter function for conv3d_s1 kernel
 static auto getConv3dS1Kernel(int C, int M, int K, int Hin, int Win, int Hout, int Wout, int W_grid)
 {
+  Timer specializeTimer;
+  specializeTimer.reset();
   inja::json data = {
     {"tile_width", TILE_WIDTH},
     {"C", C},
@@ -203,6 +205,8 @@ static auto getConv3dS1Kernel(int C, int M, int K, int Hin, int Win, int Hout, i
   data["device_include"] = kDeviceInclude;
   auto kernelSource = inja::render(std::string{StrConv3dS1Template}, data);
   auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
+  Logger::outs("Proteus") << "Specialized Kernel Construction "
+                          << specializeTimer.elapsed() << " ms\n";
   auto Kernel = JitMod->getKernel<void(const float *, const float *, float *)>("conv3d_s1");
   return std::make_pair(std::move(JitMod), Kernel);
 }
@@ -210,6 +214,8 @@ static auto getConv3dS1Kernel(int C, int M, int K, int Hin, int Win, int Hout, i
 // Getter function for conv3d_s2 kernel
 static auto getConv3dS2Kernel(int C, int M, int K, int Hin, int Win, int Hout, int Wout, int W_grid)
 {
+  Timer specializeTimer;
+  specializeTimer.reset();
   inja::json data = {
     {"tile_width", TILE_WIDTH},
     {"C", C},
@@ -224,6 +230,8 @@ static auto getConv3dS2Kernel(int C, int M, int K, int Hin, int Win, int Hout, i
   data["device_include"] = kDeviceInclude;
   auto kernelSource = inja::render(std::string{StrConv3dS2Template}, data);
   auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
+  Logger::outs("Proteus") << "Specialized Kernel Construction "
+                          << specializeTimer.elapsed() << " ms\n";
   auto Kernel = JitMod->getKernel<void(const float *, const float *, float *)>("conv3d_s2");
   return std::make_pair(std::move(JitMod), Kernel);
 }
@@ -231,6 +239,8 @@ static auto getConv3dS2Kernel(int C, int M, int K, int Hin, int Win, int Hout, i
 // Getter function for conv3d_s3 kernel
 static auto getConv3dS3Kernel(int C, int M, int K, int Hin, int Win, int Hout, int Wout, int W_grid)
 {
+  Timer specializeTimer;
+  specializeTimer.reset();
   inja::json data = {
     {"tile_width", TILE_WIDTH},
     {"C", C},
@@ -245,6 +255,8 @@ static auto getConv3dS3Kernel(int C, int M, int K, int Hin, int Win, int Hout, i
   data["device_include"] = kDeviceInclude;
   auto kernelSource = inja::render(std::string{StrConv3dS3Template}, data);
   auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
+  Logger::outs("Proteus") << "Specialized Kernel Construction "
+                          << specializeTimer.elapsed() << " ms\n";
   auto Kernel = JitMod->getKernel<void(const float *, const float *, float *)>("conv3d_s3");
   return std::make_pair(std::move(JitMod), Kernel);
 }
@@ -303,14 +315,10 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
 
   gpuErrCheck(gpuDeviceSynchronize());
 
-  Timer specializeTimer;
-  specializeTimer.reset();
   // Get kernels with specialized parameters
   auto [JitModS1, KernelS1] = getConv3dS1Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
   auto [JitModS2, KernelS2] = getConv3dS2Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
   auto [JitModS3, KernelS3] = getConv3dS3Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
-  Logger::outs("Proteus") << "Specialized Kernel Construction "
-                          << specializeTimer.elapsed() << " ms\n";
 
   // Test conv3d_s1 (grid organization: N, M, Z)
   auto start = std::chrono::steady_clock::now();

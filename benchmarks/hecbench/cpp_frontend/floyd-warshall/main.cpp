@@ -97,12 +97,16 @@ extern "C" __global__ void floydWarshallPass(
 
 static auto getFloydWarshallKernel(unsigned int numNodes)
 {
+  Timer specializeTimer;
+  specializeTimer.reset();
   inja::json data = {
     {"include", std::string{kDeviceInclude}},
     {"numNodes", numNodes}
   };
   auto kernelSource = inja::render(std::string{StrFloydWarshallKernelTemplate}, data);
   auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
+  Logger::outs("Proteus") << "Specialized Kernel Construction "
+                          << specializeTimer.elapsed() << " ms\n";
   auto Kernel = JitMod->getKernel<void(unsigned int*, unsigned int*, const unsigned int)>("floydWarshallPass");
   return std::make_pair(std::move(JitMod), Kernel);
 }
@@ -188,11 +192,7 @@ int main(int argc, char** argv) {
   dim3 block(localThreadsX, localThreadsY);
 
   // JIT compile kernel specialized for this numNodes
-  Timer specializeTimer;
-  specializeTimer.reset();
   auto [JitMod, Kernel] = getFloydWarshallKernel(numNodes);
-  Logger::outs("Proteus") << "Specialized Kernel Construction "
-                          << specializeTimer.elapsed() << " ms\n";
 
   const size_t totalElements = static_cast<size_t>(numNodes) * static_cast<size_t>(numNodes);
   // Random number generator

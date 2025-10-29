@@ -180,6 +180,8 @@ extern "C" __global__ void gpuRegSharedTiledMatmulKernel(const double * A,
 
 static auto getRegSharedTiledMatMulKernel(int N)
 {
+  Timer specializeTimer;
+  specializeTimer.reset();
   inja::json data = {
     {"include", std::string{kDeviceInclude}},
     {"N", N},
@@ -191,18 +193,24 @@ static auto getRegSharedTiledMatMulKernel(int N)
   };
   auto KernelStr = inja::render(std::string{StrGpuRegSharedTiledMatmulKernelTemplate}, data);
   auto JitMod = std::make_unique<CppJitModule>(TARGET, KernelStr);
+  Logger::outs("Proteus") << "Specialized Kernel Construction "
+                          << specializeTimer.elapsed() << " ms\n";
   auto Kernel = JitMod->getKernel<void(const double *, const double *, double *)>("gpuRegSharedTiledMatmulKernel");
   return std::make_pair(std::move(JitMod), Kernel);
 }
 
 static auto getNontiledMatMulKernel(int N)
 {
+  Timer specializeTimer;
+  specializeTimer.reset();
   inja::json data = {
     {"include", std::string{kDeviceInclude}},
     {"N", N}
   };
   auto KernelStr = inja::render(std::string{StrGpuNontiledMatmulKernelTemplate}, data);
   auto JitMod = std::make_unique<CppJitModule>(TARGET, KernelStr);
+  Logger::outs("Proteus") << "Specialized Kernel Construction "
+                          << specializeTimer.elapsed() << " ms\n";
   auto Kernel = JitMod->getKernel<void(const double *, const double *, double *)>("gpuNontiledMatmulKernel");
   return std::make_pair(std::move(JitMod), Kernel);
 }
@@ -289,11 +297,7 @@ int main(int argc, char** argv) {
   gpuErrCheck(gpuMemcpy(DD, DH, Bytes, gpuMemcpyHostToDevice));
 
   if (KernelType == "gpu_regtiled") {
-    Timer specializeTimer;
-    specializeTimer.reset();
     auto [JitMod, Kernel] = getRegSharedTiledMatMulKernel(N);
-    Logger::outs("Proteus") << "Specialized Kernel Construction "
-                            << specializeTimer.elapsed() << " ms\n";
 
     // Warm-up: E=A*B, F=C*D, G=E*F
     Kernel.launch({static_cast<unsigned int>(N / BlockTileN), static_cast<unsigned int>(N / BlockTileM), 1},
@@ -332,11 +336,7 @@ int main(int argc, char** argv) {
 
   } else {
     // KernelType is gpu_naive after normalization above.
-    Timer specializeTimer;
-    specializeTimer.reset();
     auto [JitModNT, KernelNT] = getNontiledMatMulKernel(N);
-    Logger::outs("Proteus") << "Specialized Kernel Construction "
-                            << specializeTimer.elapsed() << " ms\n";
     unsigned int blockX = static_cast<unsigned int>(MatmulTileSize);
     unsigned int blockY = static_cast<unsigned int>(MatmulTileSize);
     unsigned int gridX = static_cast<unsigned int>((N + blockX - 1) / blockX);
