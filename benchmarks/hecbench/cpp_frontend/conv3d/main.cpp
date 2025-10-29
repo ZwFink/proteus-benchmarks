@@ -13,6 +13,7 @@
 #include <string>
 #include <string_view>
 #include <memory>
+#include <tuple>
 #include <utility>
 #include <proteus/CppJitModule.hpp>
 #include "inja/inja.h"
@@ -72,8 +73,8 @@ void reference(const float * __restrict__ X,
         }
 }
 
-// Kernel template for conv3d_s1 (blockIdx organization: N, M, Z)
-constexpr std::string_view StrConv3dS1Template = R"cpp({{ device_include }}
+// Kernel template containing all conv3d kernels
+constexpr std::string_view StrConv3dKernelsTemplate = R"cpp({{ device_include }}
 extern "C" __global__ void conv3d_s1(const float * __restrict__ X,
                                       const float * __restrict__ W,
                                             float * __restrict__ Y)
@@ -88,6 +89,9 @@ extern "C" __global__ void conv3d_s1(const float * __restrict__ X,
   constexpr int Wout = {{ Wout }};
   constexpr int W_grid = {{ W_grid }};
 
+  #undef II
+  #undef WI
+  #undef OI
   #define II(n,c,h,w) ((n)*C*Hin*Win+(c)*Hin*Win+(h)*Win+w)
   #define WI(n,c,h,w) ((n)*C*K*K+(c)*K*K+(h)*K+w)
   #define OI(n,c,h,w) ((n)*M*Hout*Wout+(c)*Hout*Wout+(h)*Wout+w)
@@ -107,16 +111,16 @@ extern "C" __global__ void conv3d_s1(const float * __restrict__ X,
     }
     Y[OI(n, m, h, w)] = s;
   }
+#undef II
+#undef WI
+#undef OI
 }
-)cpp";
 
-// Kernel template for conv3d_s2 (blockIdx organization: M, Z, N)
-constexpr std::string_view StrConv3dS2Template = R"cpp({{ device_include }}
 extern "C" __global__ void conv3d_s2(const float * __restrict__ X,
                                       const float * __restrict__ W,
                                             float * __restrict__ Y)
 {
-  constexpr int tile_width = {{ tile_width }};
+  constexpr int TILE_WIDTH = {{ tile_width }};
   constexpr int C = {{ C }};
   constexpr int M = {{ M }};
   constexpr int K = {{ K }};
@@ -126,13 +130,16 @@ extern "C" __global__ void conv3d_s2(const float * __restrict__ X,
   constexpr int Wout = {{ Wout }};
   constexpr int W_grid = {{ W_grid }};
 
+  #undef II
+  #undef WI
+  #undef OI
   #define II(n,c,h,w) ((n)*C*Hin*Win+(c)*Hin*Win+(h)*Win+w)
   #define WI(n,c,h,w) ((n)*C*K*K+(c)*K*K+(h)*K+w)
   #define OI(n,c,h,w) ((n)*M*Hout*Wout+(c)*Hout*Wout+(h)*Wout+w)
 
   int m = blockIdx.x;
-  int h = blockIdx.y / W_grid * tile_width + threadIdx.y;
-  int w = blockIdx.y % W_grid * tile_width + threadIdx.x;
+  int h = blockIdx.y / W_grid * TILE_WIDTH + threadIdx.y;
+  int w = blockIdx.y % W_grid * TILE_WIDTH + threadIdx.x;
   int n = blockIdx.z;
   if (h < Hout && w < Wout) {
     float s = 0;
@@ -145,11 +152,11 @@ extern "C" __global__ void conv3d_s2(const float * __restrict__ X,
     }
     Y[OI(n, m, h, w)] = s;
   }
+#undef II
+#undef WI
+#undef OI
 }
-)cpp";
 
-// Kernel template for conv3d_s3 (blockIdx organization: Z, N, M)
-constexpr std::string_view StrConv3dS3Template = R"cpp({{ device_include }}
 extern "C" __global__ void conv3d_s3(const float * __restrict__ X,
                                       const float * __restrict__ W,
                                             float * __restrict__ Y)
@@ -164,6 +171,9 @@ extern "C" __global__ void conv3d_s3(const float * __restrict__ X,
   constexpr int Wout = {{ Wout }};
   constexpr int W_grid = {{ W_grid }};
 
+  #undef II
+  #undef WI
+  #undef OI
   #define II(n,c,h,w) ((n)*C*Hin*Win+(c)*Hin*Win+(h)*Win+w)
   #define WI(n,c,h,w) ((n)*C*K*K+(c)*K*K+(h)*K+w)
   #define OI(n,c,h,w) ((n)*M*Hout*Wout+(c)*Hout*Wout+(h)*Wout+w)
@@ -183,11 +193,14 @@ extern "C" __global__ void conv3d_s3(const float * __restrict__ X,
     }
     Y[OI(n, m, h, w)] = s;
   }
+#undef II
+#undef WI
+#undef OI
 }
 )cpp";
 
-// Getter function for conv3d_s1 kernel
-static auto getConv3dS1Kernel(int C, int M, int K, int Hin, int Win, int Hout, int Wout, int W_grid)
+// Getter function for all conv3d kernels
+static auto getConv3dKernels(int C, int M, int K, int Hin, int Win, int Hout, int Wout, int W_grid)
 {
   Timer specializeTimer;
   specializeTimer.reset();
@@ -203,62 +216,14 @@ static auto getConv3dS1Kernel(int C, int M, int K, int Hin, int Win, int Hout, i
     {"W_grid", W_grid}
   };
   data["device_include"] = kDeviceInclude;
-  auto kernelSource = inja::render(std::string{StrConv3dS1Template}, data);
+  auto kernelSource = inja::render(std::string{StrConv3dKernelsTemplate}, data);
   auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
   Logger::outs("Proteus") << "Specialized Kernel Construction "
                           << specializeTimer.elapsed() << " ms\n";
-  auto Kernel = JitMod->getKernel<void(const float *, const float *, float *)>("conv3d_s1");
-  return std::make_pair(std::move(JitMod), Kernel);
-}
-
-// Getter function for conv3d_s2 kernel
-static auto getConv3dS2Kernel(int C, int M, int K, int Hin, int Win, int Hout, int Wout, int W_grid)
-{
-  Timer specializeTimer;
-  specializeTimer.reset();
-  inja::json data = {
-    {"tile_width", TILE_WIDTH},
-    {"C", C},
-    {"M", M},
-    {"K", K},
-    {"Hin", Hin},
-    {"Win", Win},
-    {"Hout", Hout},
-    {"Wout", Wout},
-    {"W_grid", W_grid}
-  };
-  data["device_include"] = kDeviceInclude;
-  auto kernelSource = inja::render(std::string{StrConv3dS2Template}, data);
-  auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
-  Logger::outs("Proteus") << "Specialized Kernel Construction "
-                          << specializeTimer.elapsed() << " ms\n";
-  auto Kernel = JitMod->getKernel<void(const float *, const float *, float *)>("conv3d_s2");
-  return std::make_pair(std::move(JitMod), Kernel);
-}
-
-// Getter function for conv3d_s3 kernel
-static auto getConv3dS3Kernel(int C, int M, int K, int Hin, int Win, int Hout, int Wout, int W_grid)
-{
-  Timer specializeTimer;
-  specializeTimer.reset();
-  inja::json data = {
-    {"tile_width", TILE_WIDTH},
-    {"C", C},
-    {"M", M},
-    {"K", K},
-    {"Hin", Hin},
-    {"Win", Win},
-    {"Hout", Hout},
-    {"Wout", Wout},
-    {"W_grid", W_grid}
-  };
-  data["device_include"] = kDeviceInclude;
-  auto kernelSource = inja::render(std::string{StrConv3dS3Template}, data);
-  auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
-  Logger::outs("Proteus") << "Specialized Kernel Construction "
-                          << specializeTimer.elapsed() << " ms\n";
-  auto Kernel = JitMod->getKernel<void(const float *, const float *, float *)>("conv3d_s3");
-  return std::make_pair(std::move(JitMod), Kernel);
+  auto KernelS1 = JitMod->getKernel<void(const float *, const float *, float *)>("conv3d_s1");
+  auto KernelS2 = JitMod->getKernel<void(const float *, const float *, float *)>("conv3d_s2");
+  auto KernelS3 = JitMod->getKernel<void(const float *, const float *, float *)>("conv3d_s3");
+  return std::tuple{std::move(JitMod), KernelS1, KernelS2, KernelS3};
 }
 
 void conv3D(const int N, const int C, const int M, const int Win, const int Hin, const int K, const int repeat, const int do_verify)
@@ -316,9 +281,7 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
   gpuErrCheck(gpuDeviceSynchronize());
 
   // Get kernels with specialized parameters
-  auto [JitModS1, KernelS1] = getConv3dS1Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
-  auto [JitModS2, KernelS2] = getConv3dS2Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
-  auto [JitModS3, KernelS3] = getConv3dS3Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
+  auto [JitMod, KernelS1, KernelS2, KernelS3] = getConv3dKernels(C, M, K, Hin, Win, Hout, Wout, W_grid);
 
   // Test conv3d_s1 (grid organization: N, M, Z)
   auto start = std::chrono::steady_clock::now();

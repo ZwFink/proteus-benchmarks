@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include "../../../gpu/gpu_common.h"
 #include <proteus/CppJitModule.hpp>
 #include "inja/inja.h"
@@ -55,8 +56,8 @@ free(score);
 return output;
 }
 
-// Kernel template for attention_kernel1
-constexpr std::string_view StrAttentionKernel1Template = DEVICE_INCLUDE R"cpp(
+// Kernel template for all attention kernels in a single module
+constexpr std::string_view StrAttentionKernelsTemplate = DEVICE_INCLUDE R"cpp(
 extern "C" __global__ void attention_kernel1(
     const float* __restrict__ key,
     const float* __restrict__ query,
@@ -74,10 +75,7 @@ extern "C" __global__ void attention_kernel1(
     atomicAdd(exp_sum, __expf(sum));
   }
 }
-)cpp";
 
-// Kernel template for attention_kernel2
-constexpr std::string_view StrAttentionKernel2Template = DEVICE_INCLUDE R"cpp(
 extern "C" __global__ void attention_kernel2(
     const float* __restrict__ exp_sum,
     const float* __restrict__ dot_product,
@@ -88,10 +86,7 @@ extern "C" __global__ void attention_kernel2(
   if (i < n)
     score[i] = __expf(dot_product[i]) / exp_sum[0];
 }
-)cpp";
 
-// Kernel template for attention_kernel3
-constexpr std::string_view StrAttentionKernel3Template = DEVICE_INCLUDE R"cpp(
 extern "C" __global__ void attention_kernel3(
     const float* __restrict__ score,
     const float* __restrict__ value,
@@ -109,46 +104,20 @@ extern "C" __global__ void attention_kernel3(
 }
 )cpp";
 
-// Getter function for attention_kernel1
-static auto getAttentionKernel1(int n, int d)
+// Getter function for all attention kernels
+static auto getAttentionKernels(int n, int d)
 {
   Timer specializeTimer;
   specializeTimer.reset();
   inja::json data = {{"n", n}, {"d", d}};
-  auto kernelSource = inja::render(std::string{StrAttentionKernel1Template}, data);
+  auto kernelSource = inja::render(std::string{StrAttentionKernelsTemplate}, data);
   auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
   Logger::outs("Proteus") << "Specialized Kernel Construction "
                           << specializeTimer.elapsed() << " ms\n";
-  auto Kernel = JitMod->getKernel<void(const float *, const float *, float *, float *)>("attention_kernel1");
-  return std::make_pair(std::move(JitMod), Kernel);
-}
-
-// Getter function for attention_kernel2
-static auto getAttentionKernel2(int n)
-{
-  Timer specializeTimer;
-  specializeTimer.reset();
-  inja::json data = {{"n", n}};
-  auto kernelSource = inja::render(std::string{StrAttentionKernel2Template}, data);
-  auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
-  Logger::outs("Proteus") << "Specialized Kernel Construction "
-                          << specializeTimer.elapsed() << " ms\n";
-  auto Kernel = JitMod->getKernel<void(const float *, const float *, float *)>("attention_kernel2");
-  return std::make_pair(std::move(JitMod), Kernel);
-}
-
-// Getter function for attention_kernel3
-static auto getAttentionKernel3(int n, int d)
-{
-  Timer specializeTimer;
-  specializeTimer.reset();
-  inja::json data = {{"n", n}, {"d", d}};
-  auto kernelSource = inja::render(std::string{StrAttentionKernel3Template}, data);
-  auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
-  Logger::outs("Proteus") << "Specialized Kernel Construction "
-                          << specializeTimer.elapsed() << " ms\n";
-  auto Kernel = JitMod->getKernel<void(const float *, const float *, float *)>("attention_kernel3");
-  return std::make_pair(std::move(JitMod), Kernel);
+  auto Kernel1 = JitMod->getKernel<void(const float *, const float *, float *, float *)>("attention_kernel1");
+  auto Kernel2 = JitMod->getKernel<void(const float *, const float *, float *)>("attention_kernel2");
+  auto Kernel3 = JitMod->getKernel<void(const float *, const float *, float *)>("attention_kernel3");
+  return std::tuple{std::move(JitMod), Kernel1, Kernel2, Kernel3};
 }
 
 float* attention_device(const float* key, const float* value, const float* query,
@@ -186,9 +155,7 @@ float* attention_device(const float* key, const float* value, const float* query
 
 
   // Get kernels with specialized n and d values
-  auto [JitMod1, Kernel1] = getAttentionKernel1(n, d);
-  auto [JitMod2, Kernel2] = getAttentionKernel2(n);
-  auto [JitMod3, Kernel3] = getAttentionKernel3(n, d);
+  auto [JitMod, Kernel1, Kernel2, Kernel3] = getAttentionKernels(n, d);
 
   auto start = std::chrono::steady_clock::now();
 
