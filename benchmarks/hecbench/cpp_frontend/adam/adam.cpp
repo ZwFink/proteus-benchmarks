@@ -148,10 +148,10 @@ int main(int argc, char *argv[]) {
   };
   auto kernelSource = inja::render(std::string{StrAdamKernelTemplate}, data);
 
+  CppJitModule CJM{TARGET, kernelSource};
   const auto specialize_ms = specializeTimer.elapsed();
   Logger::outs("Proteus") << "Specialized Kernel Construction "
                           << specialize_ms << " ms\n";
-  CppJitModule CJM{TARGET, kernelSource};
 
   CJM.compile();
   using AdamSig = void(float *, float *, float *, const float *, adamMode_t);

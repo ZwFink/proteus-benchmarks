@@ -18,8 +18,8 @@ using namespace builtins::gpu;
 
 // Naive tiled JIT kernel (C = A x B) for square N x N, double.
 static auto getMatmulKernel(int N, int TileSize) {
-  auto JitMod = std::make_unique<JitModule>(TARGET);
   Timer T;
+  auto JitMod = std::make_unique<JitModule>(TARGET);
   auto KernelHandle = JitMod->addKernel<void(double *, double *, double *)>("tiled_matmul");
   auto &F = KernelHandle.F;
   {

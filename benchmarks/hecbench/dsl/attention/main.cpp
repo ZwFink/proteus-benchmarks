@@ -50,8 +50,8 @@ return output;
 
 // Kernel 1: Compute dot products and accumulate exp_sum
 static auto getAttentionKernel1(int n, int d) {
-  auto JitMod = std::make_unique<JitModule>(TARGET);
   Timer T;
+  auto JitMod = std::make_unique<JitModule>(TARGET);
   auto KernelHandle = JitMod->addKernel<void(float*, float*, float*, float*)>("attention_kernel1");
   auto &F = KernelHandle.F;
   {
@@ -102,8 +102,8 @@ static auto getAttentionKernel1(int n, int d) {
 
 // Kernel 2: Compute scores (normalized with exp_sum)
 static auto getAttentionKernel2(int n) {
-  auto JitMod = std::make_unique<JitModule>(TARGET);
   Timer T;
+  auto JitMod = std::make_unique<JitModule>(TARGET);
   auto KernelHandle = JitMod->addKernel<void(float*, float*, float*)>("attention_kernel2");
   auto &F = KernelHandle.F;
   {
@@ -139,8 +139,8 @@ static auto getAttentionKernel2(int n) {
 
 // Kernel 3: Compute output using scores and values
 static auto getAttentionKernel3(int n, int d) {
-  auto JitMod = std::make_unique<JitModule>(TARGET);
   Timer T;
+  auto JitMod = std::make_unique<JitModule>(TARGET);
   auto KernelHandle = JitMod->addKernel<void(float*, float*, float*)>("attention_kernel3");
   auto &F = KernelHandle.F;
   {

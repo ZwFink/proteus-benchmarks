@@ -24,8 +24,8 @@ using namespace builtins::gpu;
 
 
 static auto getMatmulKernel(int N, int TileSize) {
-  auto JitMod = std::make_unique<JitModule>(TARGET);
   Timer T;
+  auto JitMod = std::make_unique<JitModule>(TARGET);
   auto KernelHandle =
       JitMod->addKernel<void(double *, double *, double *)>("tiled_matmul");
     auto &F = KernelHandle.F;
@@ -77,8 +77,8 @@ static auto getMatmulKernel(int N, int TileSize) {
 // 4x4 per-thread micro-tile, K tile = 8 (defaults; overridable via macros).
 
 static auto getRegSharedTiledMatmulKernel(int N, int blockTileM, int blockTileN, int kTile, int regTileM, int regTileN) {
-  auto JitMod = std::make_unique<JitModule>(TARGET);
   Timer T;
+  auto JitMod = std::make_unique<JitModule>(TARGET);
   auto KernelHandle =
       JitMod->addKernel<void(double *, double *, double *)>("reg_shared_tiled_matmul");
   auto &F = KernelHandle.F;

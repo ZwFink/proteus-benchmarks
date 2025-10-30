@@ -189,8 +189,8 @@ void BezierCPU(const float *inp,
 }
 
 auto createJitModule(int _NI, int _NJ, int _RESOLUTIONI, int _RESOLUTIONJ) {
-  auto J = std::make_unique<JitModule>(TARGET);
   Timer T;
+  auto J = std::make_unique<JitModule>(TARGET);
   auto KernelHandle =
       J->addKernel<void(float *, float*)>("BezierGPU");
   auto &F = KernelHandle.F;

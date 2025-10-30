@@ -94,8 +94,8 @@ static void floydWarshallCPUReference(unsigned int * pathDistanceMatrix,
 }
 
 static auto createJitModuleSpecial(unsigned int _numNodes) {
-  auto J = std::make_unique<JitModule>(TARGET);
   Timer T;
+  auto J = std::make_unique<JitModule>(TARGET);
   auto KernelHandle = J->addKernel<void(unsigned int*, unsigned int*, unsigned int, unsigned int)>("floydWarshallPass");
   auto &F = KernelHandle.F;
   auto [pathDistanceBuffer, pathBuffer, numNodes, pass] = F.getArgs();
