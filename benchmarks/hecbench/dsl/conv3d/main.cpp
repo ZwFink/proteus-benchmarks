@@ -45,6 +45,7 @@ void verify(const float *Y, float *Y_ref, size_t Y_size) {
 static auto getConv3dS1Kernel(int C_, int M_, int K_, int Hin_, int Win_, int Hout_, int Wout_,
                               int W_grid_) {
   auto JitMod = std::make_unique<JitModule>(TARGET);
+  Timer T;
   auto KernelHandle = JitMod->addKernel<void(float *, float *, float *)>("conv3d_s1");
   auto &F = KernelHandle.F;
   {
@@ -102,6 +103,7 @@ static auto getConv3dS1Kernel(int C_, int M_, int K_, int Hin_, int Win_, int Ho
     }
     F.endFunction();
   }
+  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
   return std::make_pair(std::move(JitMod), KernelHandle);
 }
 
@@ -109,6 +111,7 @@ static auto getConv3dS1Kernel(int C_, int M_, int K_, int Hin_, int Win_, int Ho
 static auto getConv3dS2Kernel(int C_, int M_, int K_, int Hin_, int Win_, int Hout_, int Wout_,
                               int W_grid_) {
   auto JitMod = std::make_unique<JitModule>(TARGET);
+  Timer T;
   auto KernelHandle = JitMod->addKernel<void(float *, float *, float *)>("conv3d_s2");
   auto &F = KernelHandle.F;
   {
@@ -166,6 +169,7 @@ static auto getConv3dS2Kernel(int C_, int M_, int K_, int Hin_, int Win_, int Ho
     }
     F.endFunction();
   }
+  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
   return std::make_pair(std::move(JitMod), KernelHandle);
 }
 
@@ -173,6 +177,7 @@ static auto getConv3dS2Kernel(int C_, int M_, int K_, int Hin_, int Win_, int Ho
 static auto getConv3dS3Kernel(int C_, int M_, int K_, int Hin_, int Win_, int Hout_, int Wout_,
                               int W_grid_) {
   auto JitMod = std::make_unique<JitModule>(TARGET);
+  Timer T;
   auto KernelHandle = JitMod->addKernel<void(float *, float *, float *)>("conv3d_s3");
   auto &F = KernelHandle.F;
   {
@@ -230,6 +235,7 @@ static auto getConv3dS3Kernel(int C_, int M_, int K_, int Hin_, int Win_, int Ho
     }
     F.endFunction();
   }
+  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
   return std::make_pair(std::move(JitMod), KernelHandle);
 }
 
@@ -304,15 +310,12 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
   printf("3D grid dimensions: N=%d M=%d Z=%d\n", N, M, Z);
 
   // Build and compile kernels
-  Timer T;
-  T.reset();
   auto [JitMod1, KernelHandle1] =
       getConv3dS1Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
   auto [JitMod2, KernelHandle2] =
       getConv3dS2Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
   auto [JitMod3, KernelHandle3] =
       getConv3dS3Kernel(C, M, K, Hin, Win, Hout, Wout, W_grid);
-  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
 
   JitMod1->compile();
   JitMod2->compile();

@@ -190,6 +190,7 @@ void BezierCPU(const float *inp,
 
 auto createJitModule(int _NI, int _NJ, int _RESOLUTIONI, int _RESOLUTIONJ) {
   auto J = std::make_unique<JitModule>(TARGET);
+  Timer T;
   auto KernelHandle =
       J->addKernel<void(float *, float*)>("BezierGPU");
   auto &F = KernelHandle.F;
@@ -332,6 +333,7 @@ auto createJitModule(int _NI, int _NJ, int _RESOLUTIONI, int _RESOLUTIONJ) {
     F.endFunction();
   }
 
+  Logger::outs("proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
   return std::make_pair(std::move(J), KernelHandle);
 }
 
@@ -357,10 +359,7 @@ if (p.verify) {
 size_t in_size   = static_cast<size_t>(in_size_i + 1) * static_cast<size_t>(in_size_j + 1) * 3 * sizeof(float);
 size_t out_size  = out_elems * 3 * sizeof(float);
 
-Timer T;
-T.reset();
 auto [J, KernelHandle] = createJitModule(in_size_i, in_size_j, out_size_i, out_size_j);
-Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
 J->compile();
 
 // Trial loop
@@ -429,6 +428,8 @@ int main(int argc, char **argv) {
     float* in = (float *)malloc(in_size_bytes);
     read_input(in, p);
   
+    auto [J, KernelHandle] = createJitModule(p.in_size_i, p.in_size_j, p.out_size_i, p.out_size_j);
+    return 0;
     // run the app on the cpu and gpu
     run(in, p.in_size_i, p.in_size_j, p.out_size_i, p.out_size_j, p);
   

@@ -63,6 +63,7 @@ struct Params {
 
 static auto buildFastenKernel(size_t posesPerWI_, size_t ntypes_, size_t nposes_, size_t natlig_, size_t natpro_) {
   auto JitMod = std::make_unique<JitModule>(TARGET);
+  Timer T;
   auto KernelHandle = JitMod->addKernel<void(float*,float*,float*,int32_t*,float*,float*,float*,int32_t*,float*,float*,float*,float*,float*,float*,int32_t*, float*, float*, float*, float*)>("fasten_main");
   auto &F = KernelHandle.F;
   F.beginFunction();
@@ -338,6 +339,7 @@ static auto buildFastenKernel(size_t posesPerWI_, size_t ntypes_, size_t nposes_
   }
   F.endFunction();
 
+  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
   std::cout << "Kernel constructed successfully" << std::endl;
   return std::make_pair(std::move(JitMod), KernelHandle);
 }
@@ -657,10 +659,7 @@ std::vector<float> runKernel(const Params &params) {
   gpuMalloc(reinterpret_cast<void **>(&results),
             params.nposes * sizeof(float));
 
-  Timer T;
-  T.reset();
   auto [JitMod, KernelHandle] = buildFastenKernel(params.posesPerWI, params.ntypes, params.nposes, params.natlig, params.natpro);
-  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
   JitMod->compile();
   // JitMod->print();
 

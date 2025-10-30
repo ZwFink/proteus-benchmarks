@@ -19,6 +19,7 @@ using namespace builtins::gpu;
 // Naive tiled JIT kernel (C = A x B) for square N x N, double.
 static auto getMatmulKernel(int N, int TileSize) {
   auto JitMod = std::make_unique<JitModule>(TARGET);
+  Timer T;
   auto KernelHandle = JitMod->addKernel<void(double *, double *, double *)>("tiled_matmul");
   auto &F = KernelHandle.F;
   {
@@ -58,6 +59,7 @@ static auto getMatmulKernel(int N, int TileSize) {
     }
     F.endFunction();
   }
+  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
   return std::make_pair(std::move(JitMod), KernelHandle);
 }
 
@@ -66,6 +68,7 @@ static auto getMatmulKernel(int N, int TileSize) {
 // 4x4 per-thread micro-tile, K tile = 8 (defaults; overridable via CLI).
 static auto getRegSharedTiledMatmulKernel(int N, int blockTileM, int blockTileN, int kTile, int regTileM, int regTileN) {
   auto JitMod = std::make_unique<JitModule>(TARGET);
+  Timer T;
   auto KernelHandle = JitMod->addKernel<void(double *, double *, double *)>("reg_shared_tiled_matmul");
   auto &F = KernelHandle.F;
   {
@@ -212,6 +215,7 @@ static auto getRegSharedTiledMatmulKernel(int N, int blockTileM, int blockTileN,
     }
     F.endFunction();
   }
+  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
   return std::make_pair(std::move(JitMod), KernelHandle);
 }
 
@@ -322,10 +326,7 @@ int main(int argc, char** argv) {
 
 
   if (KernelType == "gpu_regtiled") {
-    Timer T;
-    T.reset();
     auto [JitMod, KernelHandle] = getRegSharedTiledMatmulKernel(N, blockTileMArg, blockTileNArg, kTileArg, RegTileM, RegTileN);
-    Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
     JitMod->compile();
 
     unsigned int gridX = static_cast<unsigned int>(N / blockTileNArg);
@@ -356,10 +357,7 @@ int main(int argc, char** argv) {
     std::cerr << "Average over " << NumTrials << " trials (3 GEMMs): " << AvgMs << " ms" << '\n';
 
   } else {
-    Timer T;
-    T.reset();
     auto [JitMod, KernelHandle] = getMatmulKernel(N, MatmulTileSize);
-    Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
     JitMod->compile();
 
     unsigned int gridX = static_cast<unsigned int>((N + MatmulTileSize - 1) / MatmulTileSize);

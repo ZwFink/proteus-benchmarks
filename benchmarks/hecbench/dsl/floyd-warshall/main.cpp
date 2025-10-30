@@ -95,6 +95,7 @@ static void floydWarshallCPUReference(unsigned int * pathDistanceMatrix,
 
 static auto createJitModuleSpecial(unsigned int _numNodes) {
   auto J = std::make_unique<JitModule>(TARGET);
+  Timer T;
   auto KernelHandle = J->addKernel<void(unsigned int*, unsigned int*, unsigned int, unsigned int)>("floydWarshallPass");
   auto &F = KernelHandle.F;
   auto [pathDistanceBuffer, pathBuffer, numNodes, pass] = F.getArgs();
@@ -137,6 +138,7 @@ static auto createJitModuleSpecial(unsigned int _numNodes) {
   }
   F.endFunction();
 
+  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
   return std::make_pair(std::move(J), KernelHandle);
 }
 
@@ -193,10 +195,7 @@ int main(int argc, char **argv) {
   gpuErrCheck(gpuMalloc(reinterpret_cast<void **>(&pathBuffer), matrixSizeBytes));
 
   // JIT compile kernel specialized for this numNodes
-  Timer T;
-  T.reset();
   auto [J, KernelHandle] = createJitModuleSpecial(static_cast<unsigned int>(numNodes));
-  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
   J->compile();
 
   // GPU RNG generator
