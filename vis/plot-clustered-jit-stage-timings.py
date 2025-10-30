@@ -37,9 +37,9 @@ mpl_use("Agg")
 
 STAGE_DEFINITIONS: OrderedDict[str, tuple[str, str]] = OrderedDict(
     [
-        ("specialized_median_ms", ("Specialized", "#4C72B0")),
-        ("optimized_median_ms", ("Optimized IR", "#55A868")),
-        ("device_median_ms", ("Device Binary", "#C44E52")),
+        ("specialized_median_ms", ("Specialization", "#4C72B0")),
+        ("optimized_median_ms", ("Optimized IR Gen", "#55A868")),
+        ("device_median_ms", ("Device Kernel Gen", "#C44E52")),
     ]
 )
 
