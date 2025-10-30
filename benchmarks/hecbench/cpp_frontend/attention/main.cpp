@@ -111,9 +111,10 @@ static auto getAttentionKernels(int n, int d)
   specializeTimer.reset();
   inja::json data = {{"n", n}, {"d", d}};
   auto kernelSource = inja::render(std::string{StrAttentionKernelsTemplate}, data);
-  auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
+  const auto specialize_ms = specializeTimer.elapsed();
   Logger::outs("Proteus") << "Specialized Kernel Construction "
-                          << specializeTimer.elapsed() << " ms\n";
+                          << specialize_ms << " ms\n";
+  auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
   auto Kernel1 = JitMod->getKernel<void(const float *, const float *, float *, float *)>("attention_kernel1");
   auto Kernel2 = JitMod->getKernel<void(const float *, const float *, float *)>("attention_kernel2");
   auto Kernel3 = JitMod->getKernel<void(const float *, const float *, float *)>("attention_kernel3");
