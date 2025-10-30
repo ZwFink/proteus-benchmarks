@@ -111,6 +111,7 @@ float *attention_device(const float *key, const float *value,
 }
 
 int main(int argc, char *argv[]) {
+  gpu::warmup();
   if (argc != 4 && argc != 5) {
     printf("Usage: %s <rows> <columns> <repeat> [verify]\n", argv[0]);
     return 1;

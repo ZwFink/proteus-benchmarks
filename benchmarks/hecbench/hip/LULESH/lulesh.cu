@@ -74,6 +74,7 @@ Additional BSD Notice
 #include <hip/hip_runtime.h>
 #include <allocator.h>
 //#include "hip_profiler_api.h"
+#include "../../../gpu/gpu_common.h"
 
 #ifdef USE_MPI
 #include <mpi.h>
@@ -4714,6 +4715,7 @@ int main(int argc, char *argv[])
 #endif
 
   hip_init(myRank);
+  gpu::warmup();
 
   /* assume cube subdomain geometry for now */
   Index_t nx = atoi(argv[2]);

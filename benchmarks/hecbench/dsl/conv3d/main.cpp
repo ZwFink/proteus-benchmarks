@@ -394,6 +394,7 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
 
 int main(int argc, char *argv[]) {
   proteus::init();
+  gpu::warmup();
 
   if (argc != 8 && argc != 9) {
     printf("Usage: %s <batch size:N> <input channels:C> <output feature maps:M>",

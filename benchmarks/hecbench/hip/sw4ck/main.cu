@@ -17,6 +17,7 @@
 
 #include "utils.h"
 #include "utils.cpp"
+#include "../../../gpu/gpu_common.h"
 
 int main(int argc, char* argv[]) {
   if (argc != 3) {
@@ -30,6 +31,8 @@ int main(int argc, char* argv[]) {
 
   // Repeat the execution of kernels 
   const int repeat = atoi(argv[2]);
+
+  gpu::warmup();
 
   // At most 10 input datasets
   std::map<std::string, Sarray*> arrays[10];

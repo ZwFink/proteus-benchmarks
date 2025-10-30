@@ -3,11 +3,13 @@
 #include <math.h>
 #include <chrono>
 #include <cuda.h>
+#include "../../../gpu/gpu_common.h"
 #include "utils.h"
 #include "kernel.h"
 
 int main(int argc, char* argv[])
 {
+  gpu::warmup();
   if (argc != 2) {
     printf("Usage: %s <repeat>\n", argv[0]);
     return 1;

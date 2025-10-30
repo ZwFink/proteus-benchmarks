@@ -41,6 +41,7 @@ __global__
 }
 
 int main(int argc, char *argv[]) {
+  gpu::warmup();
   if (argc != 4) {
     printf("Usage: %s <vector size> <number of time steps> <repeat>\n",
            argv[0]);

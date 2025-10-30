@@ -733,6 +733,7 @@ std::vector<float> runKernel(const Params &params) {
 
 int main(int argc, char *argv[]) {
   proteus::init();
+  gpu::warmup();
 
   auto args = std::vector<std::string>(argv + 1, argv + argc);
   auto params = loadParameters(args);

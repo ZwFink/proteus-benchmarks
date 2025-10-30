@@ -211,6 +211,7 @@ static bool verify(double *C, int N) {
 }
 
 int main(int argc, char** argv) {
+  gpu::warmup();
   unsigned int N = 8192;
   int NumTrials = 5;
   bool DoVerify = true;

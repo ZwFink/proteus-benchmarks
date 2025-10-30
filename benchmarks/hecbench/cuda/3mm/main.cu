@@ -193,6 +193,7 @@ static bool verifyG(double *G, int N) {
 }
 
 int main(int argc, char** argv) {
+  gpu::warmup();
   unsigned int N = 8192;
   int NumTrials = 5;
   bool DoVerify = true;

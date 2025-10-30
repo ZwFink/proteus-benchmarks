@@ -100,6 +100,7 @@ int main(int argc, char *argv[]) {
            argv[0]);
     return 1;
   }
+  gpu::warmup();
 
   const int vector_size = atoi(argv[1]);
   const int time_step = atoi(argv[2]);

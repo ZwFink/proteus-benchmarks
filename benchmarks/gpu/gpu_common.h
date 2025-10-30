@@ -5,6 +5,7 @@
 #if !defined(PROTEUS_ENABLE_HIP) && !defined(PROTEUS_ENABLE_CUDA)
 #define PROTEUS_ENABLE_HIP 1
 #endif
+#include <proteus/JitFrontend.hpp>
 
 // Backend selection and GPU convenience macros used across PJ DSL GPU tests
 #if PROTEUS_ENABLE_CUDA
@@ -66,5 +67,13 @@
 #else
 #error "Expected PROTEUS_ENABLE_HIP or PROTEUS_ENABLE_CUDA defined"
 #endif
+
+namespace gpu {
+inline void warmup() {
+  auto J = std::make_unique<proteus::JitModule>(TARGET);
+  (void)J; // suppress unused variable warning
+  return;
+}
+} // namespace gpu
 
 #endif // GPU_COMMON_H

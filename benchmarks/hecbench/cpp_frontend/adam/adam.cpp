@@ -81,6 +81,8 @@ int main(int argc, char *argv[]) {
   const int repeat = atoi(argv[3]);
   const bool print_output = argc >= 5 ? atoi(argv[4]) != 0 : false;
 
+  gpu::warmup();
+
   size_t size_bytes = vector_size * sizeof(float);
 
   float *m = (float *)malloc(size_bytes);

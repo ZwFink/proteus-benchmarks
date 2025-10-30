@@ -217,6 +217,8 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  gpu::warmup();
+
   float* dout = attention_device(key, value, query, n, d, r, verify);
 
   if (verify) {

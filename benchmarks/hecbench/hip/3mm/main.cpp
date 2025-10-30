@@ -239,6 +239,8 @@ int main(int argc, char** argv) {
     }
   }
 
+  gpu::warmup();
+
   std::cout << "3mm HIP-annotation: N=" << N
             << ", trials=" << NumTrials
             << ", verify=" << DoVerify

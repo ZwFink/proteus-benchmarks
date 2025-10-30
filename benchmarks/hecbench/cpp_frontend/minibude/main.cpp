@@ -627,6 +627,8 @@ int main(int argc, char *argv[]) {
   std::cout << "Deck      : " << params.deckDir << std::endl;
   std::cout << "WG        : " << params.wgSize << std::endl;
 
+  gpu::warmup();
+
   auto energies = runKernel(params);
 
 #ifdef DUMP

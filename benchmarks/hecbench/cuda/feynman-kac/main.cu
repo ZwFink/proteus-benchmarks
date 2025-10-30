@@ -93,11 +93,13 @@
 #include <math.h>
 #include <chrono>
 #include <cuda.h>
+#include "../../../gpu/gpu_common.h"
 #include "util.h"
 #include "kernel.h"
 
 int main ( int argc, char **argv )
 {
+  gpu::warmup();
   if (argc != 2) {
     printf("Usage: %s <iterations>\n", argv[0]); 
     return 1;

@@ -144,6 +144,7 @@ static auto createJitModuleSpecial(unsigned int _numNodes) {
 
 int main(int argc, char **argv) {
   proteus::init();
+  gpu::warmup();
   if (argc != 4 && argc != 5) {
     std::printf("Usage: %s <number of nodes> <iterations> <block size> [verify (0 or 1, default 0)]\n", argv[0]);
     return 1;

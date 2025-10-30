@@ -402,7 +402,7 @@ std::vector<float> runKernel(Params params) {
 }
 
 int main(int argc, char *argv[]) {
-
+  gpu::warmup();
   auto args = std::vector<std::string>(argv + 1, argv + argc);
   auto params = loadParameters(args);
 

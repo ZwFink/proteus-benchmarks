@@ -305,6 +305,8 @@ int main(int argc, char* argv[])
   int repeat = atoi(argv[7]);
   int verify = (argc == 9) ? atoi(argv[8]) : 0;
 
+  gpu::warmup();
+
   printf("3D convolution (FP32)\n");
   printf("\n========== Warmup start ==========\n");
   conv3D(N, C, M, W, H, K, 1000, verify);

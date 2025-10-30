@@ -1,7 +1,9 @@
 #include "rsbench.h"
+#include "../../../gpu/gpu_common.h"
 
 int main(int argc, char * argv[])
 {
+	gpu::warmup();
 	// =====================================================================
 	// Initialization & Command Line Read-In
 	// =====================================================================

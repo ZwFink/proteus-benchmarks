@@ -320,6 +320,8 @@ int main(int argc, char** argv) {
             << ", blkM=" << blockTileMArg << ", blkN=" << blockTileNArg
             << ", k=" << kTileArg << ")" << std::endl;
 
+  gpu::warmup();
+
   // Warn if runtime tile args differ from compile-time constants (HIP kernel is static)
   if (KernelType == "gpu_regtiled") {
     if (blockTileMArg != BlockTileM || blockTileNArg != BlockTileN || kTileArg != KTile) {

@@ -356,6 +356,7 @@ void run(float *in,
 int main(int argc, char **argv) {
 
   const Params p(argc, argv);
+  gpu::warmup();
   int num_points   = (p.in_size_i + 1) * (p.in_size_j + 1);
   size_t in_size_bytes   = static_cast<size_t>(num_points) * 3 * sizeof(float);
   //int out_size  = p.out_size_i * p.out_size_j * sizeof(XYZ);

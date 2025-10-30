@@ -7,6 +7,7 @@
 #include <functional>
 #include <algorithm>
 #include "bude.h"
+#include "../../../gpu/gpu_common.h"
 
 typedef std::chrono::high_resolution_clock::time_point TimePoint;
 
@@ -405,6 +406,8 @@ int main(int argc, char *argv[]) {
 
   auto args = std::vector<std::string>(argv + 1, argv + argc);
   auto params = loadParameters(args);
+
+  gpu::warmup();
 
   std::cout << "Poses     : " << params.nposes << std::endl;
   std::cout << "Iterations: " << params.iterations << std::endl;

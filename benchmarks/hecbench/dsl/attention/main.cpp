@@ -278,6 +278,7 @@ int main(int argc, char* argv[]) {
     printf("Usage: %s <rows> <columns> <repeat> [verify]\n", argv[0]);
     return 1;
   }
+  gpu::warmup();
   const int n = atoi(argv[1]);
   const int d = atoi(argv[2]);
   const int r = atoi(argv[3]);

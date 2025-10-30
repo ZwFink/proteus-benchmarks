@@ -146,6 +146,8 @@ int main(int argc, char** argv) {
   unsigned int blockSize = static_cast<unsigned int>(std::atoi(argv[3]));
   int do_verify = (argc == 5) ? std::atoi(argv[4]) : 0;
 
+  gpu::warmup();
+
   // Host allocations
   size_t matrixSizeBytes = static_cast<size_t>(numNodes) * static_cast<size_t>(numNodes) * sizeof(unsigned int);
   auto *pathDistanceMatrix = (unsigned int *) std::malloc(matrixSizeBytes);

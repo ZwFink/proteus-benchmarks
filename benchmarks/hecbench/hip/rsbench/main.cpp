@@ -1,4 +1,5 @@
 #include "rsbench.h"
+#include "../../../gpu/gpu_common.h"
 
 int main(int argc, char * argv[])
 {
@@ -11,6 +12,8 @@ int main(int argc, char * argv[])
 	
 	// Process CLI Fields
 	Input input = read_CLI( argc, argv );
+
+	gpu::warmup();
 	
 	// =====================================================================
 	// Print-out of Input Summary

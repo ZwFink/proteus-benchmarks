@@ -426,6 +426,8 @@ int main(int argc, char **argv) {
   float* in = (float *)malloc(in_size);
   read_input(in, p);
 
+  gpu::warmup();
+
   run(in, p.in_size_i, p.in_size_j, p.out_size_i, p.out_size_j, p);
 
   free(in);

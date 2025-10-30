@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "../../../gpu/gpu_common.h"
 
 template <typename T, typename G>
 #ifdef ENABLE_PROTEUS
@@ -49,6 +50,8 @@ int main(int argc, char *argv[]) {
   const int vector_size = atoi(argv[1]);
   const int time_step = atoi(argv[2]);
   const int repeat = atoi(argv[3]);
+
+  gpu::warmup();
 
   size_t size_bytes = vector_size * sizeof(float);
 

@@ -27,6 +27,7 @@
 #include <chrono>
 #include <hip/hip_runtime.h>
 #include <hiprand/hiprand.h>
+#include "../../../gpu/gpu_common.h"
 
 #define MAXDISTANCE    (200)
 
@@ -157,6 +158,8 @@ int main(int argc, char** argv) {
   unsigned int numIterations = atoi(argv[2]);
   unsigned int blockSize = atoi(argv[3]);
   int do_verify = (argc == 5) ? atoi(argv[4]) : 0;
+
+  gpu::warmup();
 
   // allocate and init memory used by host
   unsigned int* pathMatrix = NULL;

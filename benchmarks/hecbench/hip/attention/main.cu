@@ -115,6 +115,8 @@ int main(int argc, char* argv[]) {
   const int r = atoi(argv[3]);
   const int verify = (argc == 5) ? atoi(argv[4]) : 0;
 
+  gpu::warmup();
+
   // input
   float* key = (float*) malloc (n * d * sizeof(float));
   float* value = (float*) malloc (n * d * sizeof(float));

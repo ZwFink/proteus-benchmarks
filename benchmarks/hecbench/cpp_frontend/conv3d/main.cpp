@@ -366,6 +366,7 @@ int main(int argc, char* argv[]) {
   int verify = (argc == 9) ? atoi(argv[8]) : 0;
 
   printf("3D convolution (FP32)\n");
+  gpu::warmup();
   printf("\n========== Warmup start ==========\n");
   conv3D(N, C, M, W, H, K, 1000, verify);
   printf("\n========== Warmup done ==========\n");

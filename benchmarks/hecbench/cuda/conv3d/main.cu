@@ -289,6 +289,7 @@ void conv3D(const int N,
 
 int main(int argc, char* argv[])
 {
+  gpu::warmup();
   if (argc != 8 && argc != 9) {
     printf("Usage: %s <batch size:N> <input channels:C> <output feature maps:M>", argv[0]);
     printf(" <input width:Win> <input height:Hin> <kernel size:K> <repeat> [verify (0 or 1, default 0)]\n");

@@ -262,6 +262,9 @@ int main(int argc, char** argv) {
       }
     }
   }
+
+  gpu::warmup();
+
   std::cout << "Configuration: (N, NumTrials, DoVerify, Kernel, Tiles) = ("
             << N << ", " << NumTrials << ", " << DoVerify << ", " << KernelType
             << ", blkM=" << blockTileMArg << ", blkN=" << blockTileNArg

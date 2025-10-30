@@ -95,6 +95,7 @@
 #include <hip/hip_runtime.h>
 #include "util.h"
 #include "kernel.h"
+#include "../../../gpu/gpu_common.h"
 
 int main ( int argc, char **argv )
 {
@@ -115,6 +116,8 @@ int main ( int argc, char **argv )
   int nj;
   double rth;
   int seed = 123456789;
+
+  gpu::warmup();
 
   printf ( "\n" );
 

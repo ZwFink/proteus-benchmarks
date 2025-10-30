@@ -256,6 +256,7 @@ bool verify(double *C, int N) {
 
 int main(int argc, char** argv) {
   proteus::init();
+  gpu::warmup();
 
   // Default tile size constants
   constexpr int MatmulTileSize = 32;

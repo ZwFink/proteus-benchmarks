@@ -5,6 +5,7 @@
 #include <hip/hip_runtime.h>
 #include "utils.h"
 #include "kernel.h"
+#include "../../../gpu/gpu_common.h"
 
 int main(int argc, char* argv[])
 {
@@ -13,6 +14,9 @@ int main(int argc, char* argv[])
     return 1;
   }
   const int repeat = atoi(argv[1]);
+
+  gpu::warmup();
+
   float *th, *pii, *q;
   float *qc, *qi, *qr, *qs;
   float *den, *p, *delz;

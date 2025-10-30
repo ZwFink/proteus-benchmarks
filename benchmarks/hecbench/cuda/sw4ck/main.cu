@@ -15,10 +15,12 @@
 #include <limits>
 #include <cmath>
 
+#include "../../../gpu/gpu_common.h"
 #include "utils.h"
 #include "utils.cpp"
 
 int main(int argc, char* argv[]) {
+  gpu::warmup();
   if (argc != 3) {
     std::cout << "Usage: " << argv[0] << " <path to file> <repeat>\n";
     return 1;

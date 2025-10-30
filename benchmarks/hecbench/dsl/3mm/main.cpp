@@ -229,6 +229,7 @@ static bool verifyG(double *G, int N) {
 
 int main(int argc, char** argv) {
   proteus::init();
+  gpu::warmup();
 
   constexpr int MatmulTileSize = 32;
   constexpr int RegTileM = 4;

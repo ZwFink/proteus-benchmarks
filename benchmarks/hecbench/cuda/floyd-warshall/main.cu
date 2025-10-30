@@ -157,6 +157,7 @@ __global__ void floydWarshallPass(
 }
 
 int main(int argc, char** argv) {
+  gpu::warmup();
   if (argc != 4 && argc != 5) {
     printf("Usage: %s <number of nodes> <iterations> <block size> [verify (0 or 1, default 0)]\n", argv[0]);
     return 1;

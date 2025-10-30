@@ -264,6 +264,8 @@ int main(int argc, char** argv) {
   std::cout << "3mm cpp-frontend: N=" << N << ", trials=" << NumTrials << ", verify=" << DoVerify
             << ", kernel=" << KernelType << std::endl;
 
+  gpu::warmup();
+
   size_t Bytes = sizeof(double) * N * N;
 
   // Host matrices: A,B,C,D inputs; E,F intermediates; G output
