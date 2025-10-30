@@ -429,7 +429,6 @@ int main(int argc, char **argv) {
     read_input(in, p);
   
     auto [J, KernelHandle] = createJitModule(p.in_size_i, p.in_size_j, p.out_size_i, p.out_size_j);
-    return 0;
     // run the app on the cpu and gpu
     run(in, p.in_size_i, p.in_size_j, p.out_size_i, p.out_size_j, p);
   
