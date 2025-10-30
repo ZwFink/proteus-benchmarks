@@ -19,27 +19,40 @@ import pandas as pd
 from matplotlib import use as mpl_use
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch, Rectangle
-from plotnine import (
-    aes,
-    element_text,
-    geom_col,
-    ggplot,
-    guide_legend,
-    guides,
-    labs,
-    scale_fill_manual,
-    scale_x_continuous,
-    theme,
-    theme_bw,
-)
+from plotnine import *
 
 mpl_use("Agg")
 
+FRONTEND_LABELS: dict[str, str] = {
+    "aot": "AoT",
+    "proteus": "PJ-Annot.",
+    "dsl": "PJ-DSL",
+    "cpp": "PJ-CPP",
+}
+
+BENCHMARK_LABELS: dict[str, str] = {
+    "3mm": "3mm",
+    "adam": "Adam",
+    "attention": "Attention",
+    "bezier-surface": "Bezier-Surf.",
+    "conv3d": "Conv3D",
+    "floyd-warshall": "Floyd-Warsh.",
+    "gemm": "GEMM",
+    "minibude": "MiniBUDE",
+}
+
+
+FRONTEND_ORDER: list[str] = ["aot", "proteus", "dsl", "cpp"]
+
+AXIS_TEXT_SIZE: int = 16
+AXIS_TITLE_X_SIZE: int = 18
+AXIS_TITLE_Y_SIZE: int = 25
+
 STAGE_DEFINITIONS: OrderedDict[str, tuple[str, str]] = OrderedDict(
     [
-        ("specialized_median_ms", ("Specialization", "#4C72B0")),
-        ("optimized_median_ms", ("Optimized IR Gen", "#55A868")),
-        ("device_median_ms", ("Device Kernel Gen", "#C44E52")),
+        ("specialized_median_ms", ("Specialization", "#FFB000")),
+        ("optimized_median_ms", ("Optimized IR Gen", "#AA66FF")),
+        ("device_median_ms", ("Device Kernel Gen", "#66CCFE")),
     ]
 )
 
@@ -154,12 +167,25 @@ def prepare_dataframe(df: pd.DataFrame, platform: str) -> pd.DataFrame:
     )
 
     melted["approach"] = melted["jit_approach"].astype(str)
+    melted["approach_key"] = melted["approach"].map(lambda value: value.strip().lower())
     melted["approach_label"] = melted["approach"].map(_format_approach_label)
 
     benchmarks = unique_preserving_order(melted["benchmark"])
-    approaches = unique_preserving_order(melted["approach_label"])
+    benchmark_label_map = {
+        benchmark: _format_benchmark_label(benchmark) for benchmark in benchmarks
+    }
+    benchmark_labels = [benchmark_label_map[benchmark] for benchmark in benchmarks]
+    melted["benchmark_label"] = melted["benchmark"].map(benchmark_label_map)
+    melted["benchmark_label"] = pd.Categorical(
+        melted["benchmark_label"], categories=benchmark_labels, ordered=True
+    )
 
-    melted["benchmark"] = pd.Categorical(melted["benchmark"], categories=benchmarks, ordered=True)
+    approach_key_order = _order_approach_keys(unique_preserving_order(melted["approach_key"]))
+    key_to_label: dict[str, str] = {}
+    for key, label in zip(melted["approach_key"], melted["approach_label"]):
+        key_to_label.setdefault(key, label)
+    approaches = [key_to_label[key] for key in approach_key_order if key in key_to_label]
+
     melted["approach_label"] = pd.Categorical(
         melted["approach_label"], categories=approaches, ordered=True
     )
@@ -167,9 +193,9 @@ def prepare_dataframe(df: pd.DataFrame, platform: str) -> pd.DataFrame:
     hatch_map = _build_hatch_map(approaches)
     melted["approach_hatch"] = melted["approach_label"].map(hatch_map)
 
-    melted = melted.sort_values(["benchmark", "approach_label", "stage_label"]).reset_index(drop=True)
+    melted = melted.sort_values(["benchmark_label", "approach_label", "stage_label"]).reset_index(drop=True)
 
-    positions = _compute_positions(melted, benchmarks, approaches)
+    positions = _compute_positions(melted, benchmark_labels, approaches)
     melted["x_pos"] = positions["x_pos"]
     melted["bar_width"] = positions["bar_width"]
     melted["benchmark_center"] = positions["benchmark_center"]
@@ -186,7 +212,24 @@ def _format_approach_label(value: str) -> str:
         "jitify": "Jitify",
         "aot": "AoT",
     }
+    if normalized in FRONTEND_LABELS:
+        return FRONTEND_LABELS[normalized]
     return overrides.get(normalized, value.upper())
+
+
+def _order_approach_keys(keys: list[str]) -> list[str]:
+    ordered: list[str] = [key for key in FRONTEND_ORDER if key in keys]
+    ordered.extend([key for key in keys if key not in FRONTEND_ORDER])
+    return ordered
+
+
+def _format_benchmark_label(name: str) -> str:
+    label = BENCHMARK_LABELS.get(name)
+    if label is not None:
+        return label
+    fallback = name.replace("-", " ")
+    fallback = fallback.title().replace(" ", "-")
+    return fallback
 
 
 def _compute_positions(
@@ -213,7 +256,9 @@ def _compute_positions(
         approach: offsets[idx] for idx, approach in enumerate(approaches)
     }
 
-    benchmark_centers = df["benchmark"].astype(str).map(bench_to_index).astype(float)
+    benchmark_centers = (
+        df["benchmark_label"].astype(str).map(bench_to_index).astype(float)
+    )
     approach_offsets = df["approach_label"].astype(str).map(approach_to_offset).astype(float)
     x_positions = benchmark_centers + approach_offsets
 
@@ -233,24 +278,29 @@ def build_plot(df: pd.DataFrame, figure_size: tuple[float, float]) -> ggplot:
         + geom_col(
             width=df["bar_width"].iloc[0] if not df.empty else 0.6,
         )
-        + scale_fill_manual(name="Stage", values=stage_colors, breaks=stage_labels)
+        + scale_fill_manual(name="", values=stage_colors, breaks=stage_labels)
         + scale_x_continuous(
             breaks=sorted(df["benchmark_center"].unique()),
-            labels=[str(cat) for cat in df["benchmark"].cat.categories],
+            labels=[str(cat) for cat in df["benchmark_label"].cat.categories],
             expand=(0.02, 0.02),
         )
-        + labs(x="Benchmark", y="Median time (ms)")
-        + theme_bw()
+        + labs(x="", y="Time (ms)")
+        + theme_seaborn(style="whitegrid")
         + theme(
             figure_size=figure_size,
-            axis_text_x=element_text(rotation=45, ha="right"),
-            legend_title=element_text(size=10),
-            legend_text=element_text(size=9),
-            legend_position=(1.12, 0.72),
-            legend_direction="vertical",
+            axis_text_x=element_text(rotation=45, ha="right", size=AXIS_TEXT_SIZE),
+            axis_text_y=element_text(size=AXIS_TEXT_SIZE),
+            axis_title_x=element_text(size=AXIS_TITLE_X_SIZE),
+            axis_title_y=element_text(size=AXIS_TITLE_Y_SIZE),
+            legend_title=element_blank(),
+            legend_text=element_text(size=AXIS_TEXT_SIZE),
+            axis_ticks_minor_x=element_blank(),
+            panel_grid_major_x=element_blank(),
+            panel_grid_minor_x=element_blank(),
+            panel_grid_major_y=element_blank(),
         )
         + guides(
-            fill=guide_legend(title="JIT Stage", reverse=False),
+            fill=guide_legend(title=None, reverse=False),
         )
     )
 
@@ -264,15 +314,15 @@ def _apply_hatching_and_legends(fig, df: pd.DataFrame) -> None:
     ax = fig.axes[0]
     stage_legend = ax.legend_
     if stage_legend is not None:
-        stage_legend.set_title("JIT Stage")
+        stage_legend.set_title(None)
         stage_legend.set_frame_on(False)
 
-    ordered = df.sort_values(["benchmark", "approach_label", "stage_label"]).reset_index(drop=True)
+    ordered = df.sort_values(["benchmark_label", "approach_label", "stage_label"]).reset_index(drop=True)
     if ordered.empty:
         return
 
     grouped = (
-        ordered.groupby(["benchmark", "approach_label"], observed=True)
+        ordered.groupby(["benchmark_label", "approach_label"], observed=True)
         .agg(
             x_pos=("x_pos", "first"),
             bar_width=("bar_width", "first"),
@@ -319,7 +369,7 @@ def _apply_hatching_and_legends(fig, df: pd.DataFrame) -> None:
         approach_legend = ax.legend(
             handles,
             [handle.get_label() for handle in handles],
-            title="JIT Approach",
+            title="",
             loc="upper left",
             bbox_to_anchor=(1.12, 0.3),
             frameon=False,
