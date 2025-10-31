@@ -31,9 +31,9 @@ BENCHMARK_LABELS = {
     "3mm": "3mm",
     "adam": "Adam",
     "attention": "Attention",
-    "bezier-surface": "Bezier-Surf.",
+    "bezier-surface": "Bezier-Surface",
     "conv3d": "Conv3D",
-    "floyd-warshall": "Floyd-Warsh.",
+    "floyd-warshall": "Floyd-Warshall",
     "gemm": "GEMM",
     "minibude": "MiniBUDE",
 }
@@ -167,23 +167,28 @@ def build_plot(df: pd.DataFrame) -> ggplot:
     )
 
     return (
-        ggplot(df, aes("benchmark_label", "speedup", fill="frontend_label"))
-        + geom_col(position=position_dodge(width=0.8), width=0.7)
-        + geom_hline(yintercept=1, linetype="dashed", color="#333333", size=2)
+        ggplot(df, aes("frontend_label", "speedup", fill="frontend_label"))
+        + geom_col(width=0.65)
+        + geom_hline(yintercept=1, linetype="dashed", color="#333333", size=1.5)
+        + facet_wrap("~ benchmark_label", scales="free_y", nrow=2)
         + scale_fill_manual(values=FRONTEND_COLORS)
         + labs(x="", y="Speedup", fill="")
-        + theme_seaborn(style='whitegrid')
+        + theme_seaborn(style="whitegrid")
         + theme(
-            axis_text_x=element_text(rotation=45, ha="right", size=16),
-            figure_size=(10, 5),
-            legend_position = "top",
-            legend_direction = "horizontal",
+            # axis_text_x=element_text(rotation=45, ha="right", size=12),
+            axis_text_x=element_blank(),
+            axis_ticks_major_x=element_blank(),
+            axis_text_y=element_text(size=12),
+            axis_title_y=element_text(size=18),
+            axis_title_x=element_text(size=14),
+            legend_position="top",
+            legend_direction="horizontal",
             panel_grid_major_x=element_blank(),
             panel_grid_minor_x=element_blank(),
             panel_grid_major_y=element_blank(),
-            axis_title_y=element_text(size=25),
-            axis_title_x=element_text(size=18),
-            axis_text_y=element_text(size=16),
+            figure_size=(12, 6),
+            strip_text=element_text(size=14, weight="bold"),
+            legend_text=element_text(size=15),
         )
     )
 
