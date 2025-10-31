@@ -227,10 +227,10 @@ static auto getRegSharedTiledMatMulKernel(int N)
     {"RegTileN", RegTileN}
   };
   auto KernelStr = inja::render(std::string{StrGpuRegSharedTiledMatmulKernelTemplate}, data);
-  auto JitMod = std::make_unique<CppJitModule>(TARGET, KernelStr);
   const auto specialize_ms = specializeTimer.elapsed();
   Logger::outs("Proteus") << "Specialized Kernel Construction "
                           << specialize_ms << " ms\n";
+  auto JitMod = std::make_unique<CppJitModule>(TARGET, KernelStr);
   auto Kernel = JitMod->getKernel<void(const double *, const double *, double *)>("gpuRegSharedTiledMatmulKernel");
   return std::make_pair(std::move(JitMod), Kernel);
 }
@@ -244,10 +244,10 @@ static auto getNontiledMatMulKernel(int N)
     {"N", N}
   };
   auto KernelStr = inja::render(std::string{StrGpuNontiledMatmulKernelTemplate}, data);
-  auto JitMod = std::make_unique<CppJitModule>(TARGET, KernelStr);
   const auto specialize_ms = specializeTimer.elapsed();
   Logger::outs("Proteus") << "Specialized Kernel Construction "
                           << specialize_ms << " ms\n";
+  auto JitMod = std::make_unique<CppJitModule>(TARGET, KernelStr);
   auto Kernel = JitMod->getKernel<void(const double *, const double *, double *)>("gpuNontiledMatmulKernel");
   return std::make_pair(std::move(JitMod), Kernel);
 }

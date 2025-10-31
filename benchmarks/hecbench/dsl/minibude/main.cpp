@@ -62,8 +62,8 @@ struct Params {
 };
 
 static auto buildFastenKernel(size_t posesPerWI_, size_t ntypes_, size_t nposes_, size_t natlig_, size_t natpro_) {
-  Timer T;
   auto JitMod = std::make_unique<JitModule>(TARGET);
+  Timer T;
   auto KernelHandle = JitMod->addKernel<void(float*,float*,float*,int32_t*,float*,float*,float*,int32_t*,float*,float*,float*,float*,float*,float*,int32_t*, float*, float*, float*, float*)>("fasten_main");
   auto &F = KernelHandle.F;
   F.beginFunction();

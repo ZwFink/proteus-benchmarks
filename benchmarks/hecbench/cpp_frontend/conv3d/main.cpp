@@ -217,10 +217,10 @@ static auto getConv3dKernels(int C, int M, int K, int Hin, int Win, int Hout, in
   };
   data["device_include"] = kDeviceInclude;
   auto kernelSource = inja::render(std::string{StrConv3dKernelsTemplate}, data);
-  auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
   const auto specialize_ms = specializeTimer.elapsed();
   Logger::outs("Proteus") << "Specialized Kernel Construction "
                           << specialize_ms << " ms\n";
+  auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
   auto KernelS1 = JitMod->getKernel<void(const float *, const float *, float *)>("conv3d_s1");
   auto KernelS2 = JitMod->getKernel<void(const float *, const float *, float *)>("conv3d_s2");
   auto KernelS3 = JitMod->getKernel<void(const float *, const float *, float *)>("conv3d_s3");

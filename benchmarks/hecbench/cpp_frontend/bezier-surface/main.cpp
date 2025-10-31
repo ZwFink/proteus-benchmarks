@@ -335,10 +335,8 @@ void run(float *in,
   };
 
   const std::string kernelSource = inja::render(std::string{StrBezierKernelTemplate}, data);
+  Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
   CppJitModule module{TARGET, kernelSource};
-  const auto specialize_ms = T.elapsed();
-  Logger::outs("Proteus") << "Specialized Kernel Construction "
-                          << specialize_ms << " ms\n";
   module.compile();
   using KernelSig = void(const float *, float *);
   auto Kernel = module.getKernel<KernelSig>("BezierGPU");

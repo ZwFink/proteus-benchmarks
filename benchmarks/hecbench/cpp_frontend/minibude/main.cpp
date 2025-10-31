@@ -519,10 +519,10 @@ std::vector<float> runKernel(const Params &params) {
   };
 
   std::string kernelSource = inja::render(std::string(StrFastenKernelTemplate), data);
-  CppJitModule jitModule{TARGET, kernelSource};
   const auto specialize_ms = specializeTimer.elapsed();
   Logger::outs("Proteus") << "Specialized Kernel Construction "
                           << specialize_ms << " ms\n";
+  CppJitModule jitModule{TARGET, kernelSource};
   jitModule.compile();
 
   using FastenSig = void(const float *, const float *, const float *,

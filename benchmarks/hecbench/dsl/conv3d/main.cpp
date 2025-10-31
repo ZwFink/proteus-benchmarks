@@ -44,8 +44,8 @@ void verify(const float *Y, float *Y_ref, size_t Y_size) {
 // JIT kernel builder for conv3d_s1: grid(N, M, Z)
 static auto getConv3dS1Kernel(int C_, int M_, int K_, int Hin_, int Win_, int Hout_, int Wout_,
                               int W_grid_) {
-  Timer T;
   auto JitMod = std::make_unique<JitModule>(TARGET);
+  Timer T;
   auto KernelHandle = JitMod->addKernel<void(float *, float *, float *)>("conv3d_s1");
   auto &F = KernelHandle.F;
   {
@@ -110,8 +110,8 @@ static auto getConv3dS1Kernel(int C_, int M_, int K_, int Hin_, int Win_, int Ho
 // JIT kernel builder for conv3d_s2: grid(M, Z, N)
 static auto getConv3dS2Kernel(int C_, int M_, int K_, int Hin_, int Win_, int Hout_, int Wout_,
                               int W_grid_) {
-  Timer T;
   auto JitMod = std::make_unique<JitModule>(TARGET);
+  Timer T;
   auto KernelHandle = JitMod->addKernel<void(float *, float *, float *)>("conv3d_s2");
   auto &F = KernelHandle.F;
   {
@@ -176,8 +176,8 @@ static auto getConv3dS2Kernel(int C_, int M_, int K_, int Hin_, int Win_, int Ho
 // JIT kernel builder for conv3d_s3: grid(Z, N, M)
 static auto getConv3dS3Kernel(int C_, int M_, int K_, int Hin_, int Win_, int Hout_, int Wout_,
                               int W_grid_) {
-  Timer T;
   auto JitMod = std::make_unique<JitModule>(TARGET);
+  Timer T;
   auto KernelHandle = JitMod->addKernel<void(float *, float *, float *)>("conv3d_s3");
   auto &F = KernelHandle.F;
   {

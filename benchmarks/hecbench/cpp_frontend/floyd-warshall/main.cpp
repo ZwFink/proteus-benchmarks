@@ -104,10 +104,10 @@ static auto getFloydWarshallKernel(unsigned int numNodes)
     {"numNodes", numNodes}
   };
   auto kernelSource = inja::render(std::string{StrFloydWarshallKernelTemplate}, data);
-  auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
   const auto specialize_ms = specializeTimer.elapsed();
   Logger::outs("Proteus") << "Specialized Kernel Construction "
                           << specialize_ms << " ms\n";
+  auto JitMod = std::make_unique<CppJitModule>(TARGET, kernelSource);
   auto Kernel = JitMod->getKernel<void(unsigned int*, unsigned int*, const unsigned int)>("floydWarshallPass");
   return std::make_pair(std::move(JitMod), Kernel);
 }
