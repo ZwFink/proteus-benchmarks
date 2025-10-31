@@ -66,7 +66,11 @@ extern "C" __global__ void attention_kernel1(
 {
   constexpr int n = {{ n }};
   constexpr int d = {{ d }};
-  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int bid = blockIdx.x;
+  int tid = threadIdx.x;
+  __builtin_assume(bid < (n + 255) / 256);
+  __builtin_assume(tid < 256);
+  int i = bid * blockDim.x + tid;
   if (i < n) {
     float sum = 0;
     for (int j = 0; j < d; j++)
@@ -82,7 +86,11 @@ extern "C" __global__ void attention_kernel2(
     float* __restrict__ score)
 {
   constexpr int n = {{ n }};
-  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int bidx = blockIdx.x;
+  int tidx = threadIdx.x;
+  __builtin_assume(bidx < (n + 255) / 256);
+  __builtin_assume(tidx < 256);
+  int i = bidx * blockDim.x + tidx;
   if (i < n)
     score[i] = __expf(dot_product[i]) / exp_sum[0];
 }
@@ -94,7 +102,11 @@ extern "C" __global__ void attention_kernel3(
 {
   constexpr int n = {{ n }};
   constexpr int d = {{ d }};
-  int j = blockIdx.x * blockDim.x + threadIdx.x;
+  int bidx = blockIdx.x;
+  int tidx = threadIdx.x;
+  __builtin_assume(bidx < (d + 255) / 256);
+  __builtin_assume(tidx < 256);
+  int j = bidx * blockDim.x + tidx;
   if (j < d) {
     float sum = 0;
     for (int i = 0; i < n; i++)
