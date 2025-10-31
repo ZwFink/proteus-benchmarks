@@ -68,7 +68,7 @@ extern "C" __global__ void attention_kernel1(
   constexpr int d = {{ d }};
   int bid = blockIdx.x;
   int tid = threadIdx.x;
-  __builtin_assume(bid < (n + 255) / 256);
+  __builtin_assume(bid < ({{ n }} + 255) / 256);
   __builtin_assume(tid < 256);
   int i = bid * blockDim.x + tid;
   if (i < n) {
@@ -88,7 +88,7 @@ extern "C" __global__ void attention_kernel2(
   constexpr int n = {{ n }};
   int bidx = blockIdx.x;
   int tidx = threadIdx.x;
-  __builtin_assume(bidx < (n + 255) / 256);
+  __builtin_assume(bidx < ({{ n }} + 255) / 256);
   __builtin_assume(tidx < 256);
   int i = bidx * blockDim.x + tidx;
   if (i < n)
@@ -104,11 +104,12 @@ extern "C" __global__ void attention_kernel3(
   constexpr int d = {{ d }};
   int bidx = blockIdx.x;
   int tidx = threadIdx.x;
-  __builtin_assume(bidx < (d + 255) / 256);
+  __builtin_assume(bidx < ({{ d }} + 255) / 256);
   __builtin_assume(tidx < 256);
   int j = bidx * blockDim.x + tidx;
   if (j < d) {
     float sum = 0;
+    #pragma unroll(16)
     for (int i = 0; i < n; i++)
       sum += score[i] * value[i * d + j];
     output[j] = sum;
