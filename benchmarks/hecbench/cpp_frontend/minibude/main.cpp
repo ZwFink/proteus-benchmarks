@@ -88,25 +88,25 @@ constexpr size_t natlig = {{ natlig }};
 constexpr size_t natpro = {{ natpro }};
 
 extern "C" __global__ void fasten_main(
-    const float *__restrict__ protein_x,
-    const float *__restrict__ protein_y,
-    const float *__restrict__ protein_z,
-    const int32_t *__restrict__ protein_type,
-    const float *__restrict__ ligand_x,
-    const float *__restrict__ ligand_y,
-    const float *__restrict__ ligand_z,
-    const int32_t *__restrict__ ligand_type,
-    const float *__restrict__ transforms_0,
-    const float *__restrict__ transforms_1,
-    const float *__restrict__ transforms_2,
-    const float *__restrict__ transforms_3,
-    const float *__restrict__ transforms_4,
-    const float *__restrict__ transforms_5,
-    const int32_t *__restrict__ ff_hbtype,
-    const float *__restrict__ ff_radius,
-    const float *__restrict__ ff_hphb,
-    const float *__restrict__ ff_elsc,
-    float *__restrict__ etotals)
+    const float * protein_x,
+    const float * protein_y,
+    const float * protein_z,
+    const int32_t * protein_type,
+    const float * ligand_x,
+    const float * ligand_y,
+    const float * ligand_z,
+    const int32_t * ligand_type,
+    const float * transforms_0,
+    const float * transforms_1,
+    const float * transforms_2,
+    const float * transforms_3,
+    const float * transforms_4,
+    const float * transforms_5,
+    const int32_t * ff_hbtype,
+    const float * ff_radius,
+    const float * ff_hphb,
+    const float * ff_elsc,
+    float * etotals)
 {
   const size_t lid = threadIdx.x;
   const size_t gid = blockIdx.x;

@@ -37,9 +37,9 @@ __global__ __attribute__((annotate("jit", 4, 5, 6, 7, 8, 9, 10, 11)))
 #else
 __global__
 #endif
-void conv3d_s1(const float* __restrict__ X,
-               const float* __restrict__ W,
-                     float* __restrict__ Y,
+void conv3d_s1(const float* X,
+               const float* W,
+                     float* Y,
                const int C,
                const int M,
                const int K,
@@ -71,9 +71,9 @@ __global__ __attribute__((annotate("jit", 4, 5, 6, 7, 8, 9, 10, 11)))
 #else
 __global__
 #endif
-void conv3d_s2(const float* __restrict__ X,
-               const float* __restrict__ W,
-                     float* __restrict__ Y,
+void conv3d_s2(const float* X,
+               const float* W,
+                     float* Y,
                const int C,
                const int M,
                const int K,
@@ -105,9 +105,9 @@ __global__ __attribute__((annotate("jit", 4, 5, 6, 7, 8, 9, 10, 11)))
 #else
 __global__
 #endif
-void conv3d_s3(const float* __restrict__ X,
-               const float* __restrict__ W,
-                     float* __restrict__ Y,
+void conv3d_s3(const float* X,
+               const float* W,
+                     float* Y,
                const int C,
                const int M,
                const int K,
@@ -134,9 +134,9 @@ void conv3d_s3(const float* __restrict__ X,
   }
 }
 
-void reference(const float* __restrict__ X,
-               const float* __restrict__ W,
-                     float* __restrict__ Y,
+void reference(const float* X,
+               const float* W,
+                     float* Y,
                const int N,
                const int M,
                const int C,

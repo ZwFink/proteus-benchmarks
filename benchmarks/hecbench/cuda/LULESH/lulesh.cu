@@ -1912,26 +1912,26 @@ __launch_bounds__(64, 8)
 #endif
     void CalcVolumeForceForElems_kernel(
 
-        const Real_t *__restrict__ volo, const Real_t *__restrict__ v,
-        const Real_t *__restrict__ p, const Real_t *__restrict__ q,
+        const Real_t * volo, const Real_t * v,
+        const Real_t * p, const Real_t * q,
         Real_t hourg, Index_t numElem, Index_t padded_numElem,
-        const Index_t *__restrict__ nodelist, const Real_t *__restrict__ ss,
-        const Real_t *__restrict__ elemMass, const Real_t *__restrict__ x,
-        const Real_t *__restrict__ y, const Real_t *__restrict__ z,
-        const Real_t *__restrict__ xd, const Real_t *__restrict__ yd,
-        const Real_t *__restrict__ zd,
+        const Index_t * nodelist, const Real_t * ss,
+        const Real_t * elemMass, const Real_t * x,
+        const Real_t * y, const Real_t * z,
+        const Real_t * xd, const Real_t * yd,
+        const Real_t * zd,
 // TextureObj<Real_t> x,  TextureObj<Real_t> y,  TextureObj<Real_t> z,
 // TextureObj<Real_t> xd,  TextureObj<Real_t> yd,  TextureObj<Real_t> zd,
 // TextureObj<Real_t>* x,  TextureObj<Real_t>* y,  TextureObj<Real_t>* z,
 // TextureObj<Real_t>* xd,  TextureObj<Real_t>* yd,  TextureObj<Real_t>* zd,
 #ifdef DOUBLE_PRECISION // For floats, use atomicAdd
-        Real_t *__restrict__ fx_elem, Real_t *__restrict__ fy_elem,
-        Real_t *__restrict__ fz_elem,
+        Real_t * fx_elem, Real_t * fy_elem,
+        Real_t * fz_elem,
 #else
-        Real_t *__restrict__ fx_node, Real_t *__restrict__ fy_node,
-        Real_t *__restrict__ fz_node,
+        Real_t * fx_node, Real_t * fy_node,
+        Real_t * fz_node,
 #endif
-        Index_t *__restrict__ bad_vol, const Index_t num_threads)
+        Index_t * bad_vol, const Index_t num_threads)
 
 {
 
@@ -2078,24 +2078,24 @@ __launch_bounds__(64, 8)
 template <bool hourg_gt_zero, int cta_size>
 __global__ void CalcVolumeForceForElems_kernel_warp_per_4cell(
 
-    const Real_t *__restrict__ volo, const Real_t *__restrict__ v,
-    const Real_t *__restrict__ p, const Real_t *__restrict__ q, Real_t hourg,
+    const Real_t * volo, const Real_t * v,
+    const Real_t * p, const Real_t * q, Real_t hourg,
     Index_t numElem, Index_t padded_numElem,
-    const Index_t *__restrict__ nodelist, const Real_t *__restrict__ ss,
-    const Real_t *__restrict__ elemMass,
-    // const Real_t __restrict__ *x,  const Real_t __restrict__ *y,  const
-    // Real_t __restrict__ *z, const Real_t __restrict__ *xd,  const Real_t
-    // __restrict__ *yd,  const Real_t __restrict__ *zd,
+    const Index_t * nodelist, const Real_t * ss,
+    const Real_t * elemMass,
+    // const Real_t *x,  const Real_t *y,  const
+    // Real_t *z, const Real_t *xd,  const Real_t
+    // *yd,  const Real_t *zd,
     const Real_t *x, const Real_t *y, const Real_t *z, const Real_t *xd,
     const Real_t *yd, const Real_t *zd,
 #ifdef DOUBLE_PRECISION // For floats, use atomicAdd
-    Real_t *__restrict__ fx_elem, Real_t *__restrict__ fy_elem,
-    Real_t *__restrict__ fz_elem,
+    Real_t * fx_elem, Real_t * fy_elem,
+    Real_t * fz_elem,
 #else
-    Real_t *__restrict__ fx_node, Real_t *__restrict__ fy_node,
-    Real_t *__restrict__ fz_node,
+    Real_t * fx_node, Real_t * fy_node,
+    Real_t * fz_node,
 #endif
-    Index_t *__restrict__ bad_vol, const Index_t num_threads)
+    Index_t * bad_vol, const Index_t num_threads)
 
 {
 
@@ -2812,10 +2812,10 @@ static inline void ApplyAccelerationBoundaryConditionsForNodes(Domain *domain) {
 
 __global__ void CalcPositionAndVelocityForNodes_kernel(
     int numNode, const Real_t deltatime, const Real_t u_cut,
-    Real_t *__restrict__ x, Real_t *__restrict__ y, Real_t *__restrict__ z,
-    Real_t *__restrict__ xd, Real_t *__restrict__ yd, Real_t *__restrict__ zd,
-    const Real_t *__restrict__ xdd, const Real_t *__restrict__ ydd,
-    const Real_t *__restrict__ zdd) {
+    Real_t * x, Real_t * y, Real_t * z,
+    Real_t * xd, Real_t * yd, Real_t * zd,
+    const Real_t * xdd, const Real_t * ydd,
+    const Real_t * zdd) {
   int i = blockDim.x * blockIdx.x + threadIdx.x;
   if (i < numNode) {
     Real_t xdtmp, ydtmp, zdtmp, dt;
@@ -3125,12 +3125,12 @@ __launch_bounds__(64, 16) // 32-bit
 #endif
     void CalcKinematicsAndMonotonicQGradient_kernel(
         Index_t numElem, Index_t padded_numElem, const Real_t dt,
-        const Index_t *__restrict__ nodelist, const Real_t *__restrict__ volo,
-        const Real_t *__restrict__ v,
+        const Index_t * nodelist, const Real_t * volo,
+        const Real_t * v,
 
-        const Real_t *__restrict__ x, const Real_t *__restrict__ y,
-        const Real_t *__restrict__ z, const Real_t *__restrict__ xd,
-        const Real_t *__restrict__ yd, const Real_t *__restrict__ zd,
+        const Real_t * x, const Real_t * y,
+        const Real_t * z, const Real_t * xd,
+        const Real_t * yd, const Real_t * zd,
 
         // TextureObj<Real_t> x,
         // TextureObj<Real_t> y,
@@ -3145,13 +3145,13 @@ __launch_bounds__(64, 16) // 32-bit
         // TextureObj<Real_t>* yd,
         // TextureObj<Real_t>* zd,
 
-        Real_t *__restrict__ vnew, Real_t *__restrict__ delv,
-        Real_t *__restrict__ arealg, Real_t *__restrict__ dxx,
-        Real_t *__restrict__ dyy, Real_t *__restrict__ dzz,
-        Real_t *__restrict__ vdov, Real_t *__restrict__ delx_zeta,
-        Real_t *__restrict__ delv_zeta, Real_t *__restrict__ delx_xi,
-        Real_t *__restrict__ delv_xi, Real_t *__restrict__ delx_eta,
-        Real_t *__restrict__ delv_eta, Index_t *__restrict__ bad_vol,
+        Real_t * vnew, Real_t * delv,
+        Real_t * arealg, Real_t * dxx,
+        Real_t * dyy, Real_t * dzz,
+        Real_t * vdov, Real_t * delx_zeta,
+        Real_t * delv_zeta, Real_t * delx_xi,
+        Real_t * delv_xi, Real_t * delx_eta,
+        Real_t * delv_eta, Index_t * bad_vol,
         const Index_t num_threads) {
 
   Real_t B[3][8]; /** shape function derivatives */
@@ -3308,7 +3308,7 @@ __launch_bounds__(128, 16)
         Index_t elength,
 
         Index_t *regElemlist,
-        //    const Index_t* __restrict__ regElemlist,
+        //    const Index_t* regElemlist,
         Index_t *elemBC, Index_t *lxim, Index_t *lxip, Index_t *letam,
         Index_t *letap, Index_t *lzetam, Index_t *lzetap, Real_t *delv_xi,
         Real_t *delv_eta, Real_t *delv_zeta, Real_t *delx_xi, Real_t *delx_eta,
@@ -3726,13 +3726,13 @@ __device__ inline Index_t giveMyRegion(const Index_t *regCSR, const Index_t i,
 
 __global__ void ApplyMaterialPropertiesAndUpdateVolume_kernel(
     Index_t length, Real_t rho0, Real_t e_cut, Real_t emin,
-    Real_t *__restrict__ ql, Real_t *__restrict__ qq, Real_t *__restrict__ vnew,
-    Real_t *__restrict__ v, Real_t pmin, Real_t p_cut, Real_t q_cut,
-    Real_t eosvmin, Real_t eosvmax, Index_t *__restrict__ regElemlist,
-    //        const Index_t* __restrict__ regElemlist,
-    Real_t *__restrict__ e, Real_t *__restrict__ delv, Real_t *__restrict__ p,
-    Real_t *__restrict__ q, Real_t ss4o3, Real_t *__restrict__ ss, Real_t v_cut,
-    Index_t *__restrict__ bad_vol, const Int_t cost, const Index_t *regCSR,
+    Real_t * ql, Real_t * qq, Real_t * vnew,
+    Real_t * v, Real_t pmin, Real_t p_cut, Real_t q_cut,
+    Real_t eosvmin, Real_t eosvmax, Index_t * regElemlist,
+    //        const Index_t* regElemlist,
+    Real_t * e, Real_t * delv, Real_t * p,
+    Real_t * q, Real_t ss4o3, Real_t * ss, Real_t v_cut,
+    Index_t * bad_vol, const Int_t cost, const Index_t *regCSR,
     const Index_t *regReps, const Index_t numReg) {
 
   Real_t e_old, delvc, p_old, q_old, e_temp, delvc_temp, p_temp, q_temp;

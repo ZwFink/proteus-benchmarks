@@ -14,8 +14,8 @@ __global__
 __global__
 #endif
     void
-    adam(T *__restrict__ p, T *__restrict__ m, T *__restrict__ v,
-         const G *__restrict__ g, const float b1, const float b2,
+    adam(T *p, T * m, T * v,
+         const G * g, const float b1, const float b2,
          const float eps, const float grad_scale, const float step_size,
          const int time_step, const size_t vector_size, adamMode_t mode,
          const float decay) {

@@ -45,9 +45,9 @@ extern "C" __global__ void gpuNontiledMatmulKernel(const double * A,
 )cpp";
 #if PROTEUS_ENABLE_HIP
 // Non-tiled (naive) GPU kernel for matrix multiplication: C = A * B
-__global__ void gpuNontiledMatmulKernelStatic (const double * __restrict__ A,
-                                           const double * __restrict__ B,
-                                           double * __restrict__ C,
+__global__ void gpuNontiledMatmulKernelStatic (const double * A,
+                                           const double * B,
+                                           double * C,
                                            int N) {
   int Tx = threadIdx.x;
   int Ty = threadIdx.y;

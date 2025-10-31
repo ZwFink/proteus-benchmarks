@@ -5,8 +5,8 @@ __global__
 #endif
 __global__ void
 fk(const int ni, const int nj, int seed, const int N, const double a,
-   const double b, const double h, const double rth, int *__restrict__ n_inside,
-   double *__restrict__ err) {
+   const double b, const double h, const double rth, int * n_inside,
+   double * err) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   if (i <= ni && j <= nj) {

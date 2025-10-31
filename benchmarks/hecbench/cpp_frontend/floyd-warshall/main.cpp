@@ -59,7 +59,7 @@ inline void RandCheck(RandStatus status, const char *expr, const char *file, int
 #define MAXDISTANCE (200)
 
 // Kernel to map RNG output to [0, MAXDISTANCE] and zero the diagonal
-extern "C" __global__ void initRandomMatrix(unsigned int * __restrict__ buf, const unsigned int numNodes)
+extern "C" __global__ void initRandomMatrix(unsigned int * buf, const unsigned int numNodes)
 {
   unsigned int xValue = threadIdx.x + blockIdx.x * blockDim.x;
   unsigned int yValue = threadIdx.y + blockIdx.y * blockDim.y;
@@ -74,8 +74,8 @@ extern "C" __global__ void initRandomMatrix(unsigned int * __restrict__ buf, con
 static constexpr std::string_view StrFloydWarshallKernelTemplate = R"cpp(
 {{ include }}
 extern "C" __global__ void floydWarshallPass(
-    unsigned int * __restrict__ pathDistanceBuffer,
-    unsigned int * __restrict__ pathBuffer,
+    unsigned int * pathDistanceBuffer,
+    unsigned int * pathBuffer,
     const unsigned int pass)
 {
   constexpr unsigned int numNodes = {{ numNodes }};

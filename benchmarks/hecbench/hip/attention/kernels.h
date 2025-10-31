@@ -3,10 +3,10 @@ __attribute__((annotate("jit", 5, 6)))
 #endif
 __global__
 void attention_kernel1 (
-    const float*__restrict__ key,
-    const float*__restrict__ query,
-    float*__restrict__ dot_product,
-    float*__restrict__ exp_sum,
+    const float* key,
+    const float* query,
+    float* dot_product,
+    float* exp_sum,
     const int n,
     const int d)
 {
@@ -25,9 +25,9 @@ __attribute__((annotate("jit", 4)))
 #endif
 __global__
 void attention_kernel2 (
-    const float*__restrict__ exp_sum,
-    const float*__restrict__ dot_product,
-    float*__restrict__ score,
+    const float* exp_sum,
+    const float* dot_product,
+    float* score,
     const int n)
 {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -40,9 +40,9 @@ __attribute__((annotate("jit", 4, 5)))
 #endif
 __global__
 void attention_kernel3 (
-    const float*__restrict__ score,
-    const float*__restrict__ value,
-    float*__restrict__ output,
+    const float* score,
+    const float* value,
+    float* output,
     const int n,
     const int d)
 {

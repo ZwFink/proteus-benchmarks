@@ -17,9 +17,9 @@ constexpr int MatmulTileSize = 16;
 // Non-tiled (naive) CUDA kernel for matrix multiplication: C = A * B
 __attribute__((annotate("jit", 4)))
 __global__
-void cudaNontiledMatmulKernel(const double * __restrict__ A,
-                                           const double * __restrict__ B,
-                                           double * __restrict__ C,
+void cudaNontiledMatmulKernel(const double * A,
+                                           const double * B,
+                                           double * C,
                                            int N) {
   int Tx = threadIdx.x;
   int Ty = threadIdx.y;
@@ -60,9 +60,9 @@ constexpr int KTile = 8;
 __attribute__((annotate("jit", 4)))
 #endif
 __global__
-void cudaRegSharedTiledMatmulKernel(const double * __restrict__ A,
-                                              const double * __restrict__ B,
-                                              double * __restrict__ C,
+void cudaRegSharedTiledMatmulKernel(const double *  A,
+                                              const double *  B,
+                                              double *  C,
                                               int N) {
   // Shared tiles for current K-slice via dynamic shared memory
   #ifdef ENABLE_PROTEUS

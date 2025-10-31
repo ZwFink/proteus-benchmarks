@@ -60,7 +60,7 @@ using namespace proteus;
 using namespace builtins::gpu;
 
 // Map RNG output to [0, MAXDISTANCE] and zero the diagonal (2D launch)
-extern "C" __global__ void initRandomMatrix2D(unsigned int* __restrict__ buf, const unsigned int numNodes) {
+extern "C" __global__ void initRandomMatrix2D(unsigned int* buf, const unsigned int numNodes) {
   unsigned int x = threadIdx.x + blockIdx.x * blockDim.x;
   unsigned int y = threadIdx.y + blockIdx.y * blockDim.y;
   if (x >= numNodes || y >= numNodes) return;

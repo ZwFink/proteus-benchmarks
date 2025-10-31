@@ -49,9 +49,9 @@ void verify (const float* Y, float* Y_ref, size_t Y_size)
 }
 
 // Hin = Hout-1+K; max(h+p) is Hin - 1 as max(h) = Hout-1 and max(p) = K-1
-void reference(const float * __restrict__ X,
-               const float * __restrict__ W,
-                     float * __restrict__ Y,
+void reference(const float * X,
+               const float * W,
+                     float * Y,
                const int N,
                const int M,
                const int C,
@@ -75,9 +75,9 @@ void reference(const float * __restrict__ X,
 
 // Kernel template containing all conv3d kernels
 constexpr std::string_view StrConv3dKernelsTemplate = R"cpp({{ device_include }}
-extern "C" __global__ void conv3d_s1(const float * __restrict__ X,
-                                      const float * __restrict__ W,
-                                            float * __restrict__ Y)
+extern "C" __global__ void conv3d_s1(const float * X,
+                                      const float * W,
+                                            float * Y)
 {
   constexpr int TILE_WIDTH = {{ tile_width }};
   constexpr int C = {{ C }};
@@ -116,9 +116,9 @@ extern "C" __global__ void conv3d_s1(const float * __restrict__ X,
 #undef OI
 }
 
-extern "C" __global__ void conv3d_s2(const float * __restrict__ X,
-                                      const float * __restrict__ W,
-                                            float * __restrict__ Y)
+extern "C" __global__ void conv3d_s2(const float * X,
+                                      const float * W,
+                                            float * Y)
 {
   constexpr int TILE_WIDTH = {{ tile_width }};
   constexpr int C = {{ C }};
@@ -157,9 +157,9 @@ extern "C" __global__ void conv3d_s2(const float * __restrict__ X,
 #undef OI
 }
 
-extern "C" __global__ void conv3d_s3(const float * __restrict__ X,
-                                      const float * __restrict__ W,
-                                            float * __restrict__ Y)
+extern "C" __global__ void conv3d_s3(const float * X,
+                                      const float * W,
+                                            float * Y)
 {
   constexpr int TILE_WIDTH = {{ tile_width }};
   constexpr int C = {{ C }};

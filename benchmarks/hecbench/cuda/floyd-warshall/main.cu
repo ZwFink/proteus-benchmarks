@@ -44,7 +44,7 @@
 /**
  * Returns the lesser of the two unsigned integers a and b
  */
-unsigned int minimum(unsigned int a, unsigned int b) 
+unsigned int minimum(unsigned int a, unsigned int b)
 {
   return (b < a) ? b : a;
 }
@@ -121,7 +121,7 @@ void floydWarshallCPUReference(unsigned int * pathDistanceMatrix,
  * provided with the sample
  */
 
-__global__ void initRandomMatrix(unsigned int *__restrict__ buf, const unsigned int numNodes)
+__global__ void initRandomMatrix(unsigned int * buf, const unsigned int numNodes)
 {
   unsigned int xValue = threadIdx.x + blockIdx.x * blockDim.x;
   unsigned int yValue = threadIdx.y + blockIdx.y * blockDim.y;
@@ -136,8 +136,8 @@ __global__ void initRandomMatrix(unsigned int *__restrict__ buf, const unsigned 
 __attribute__((annotate("jit", 3)))
 #endif
 __global__ void floydWarshallPass(
-    unsigned int *__restrict__ pathDistanceBuffer,
-    unsigned int *__restrict__ pathBuffer,
+    unsigned int * pathDistanceBuffer,
+    unsigned int * pathBuffer,
     const unsigned int numNodes,
     const unsigned int pass)
 {
@@ -146,7 +146,7 @@ __global__ void floydWarshallPass(
 
   int k = pass;
   int oldWeight = pathDistanceBuffer[yValue * numNodes + xValue];
-  int tempWeight = pathDistanceBuffer[yValue * numNodes + k] + 
+  int tempWeight = pathDistanceBuffer[yValue * numNodes + k] +
                    pathDistanceBuffer[k * numNodes + xValue];
 
   if (tempWeight < oldWeight)
@@ -310,7 +310,7 @@ int main(int argc, char** argv) {
     else
     {
       printf("FAIL\n");
-      if (numNodes <= 8) 
+      if (numNodes <= 8)
       {
         for (unsigned int i = 0; i < numNodes; i++) {
           for (unsigned int j = 0; j < numNodes; j++)

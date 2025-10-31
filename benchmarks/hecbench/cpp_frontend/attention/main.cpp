@@ -59,10 +59,10 @@ return output;
 // Kernel template for all attention kernels in a single module
 constexpr std::string_view StrAttentionKernelsTemplate = DEVICE_INCLUDE R"cpp(
 extern "C" __global__ void attention_kernel1(
-    const float* __restrict__ key,
-    const float* __restrict__ query,
-    float* __restrict__ dot_product,
-    float* __restrict__ exp_sum)
+    const float* key,
+    const float* query,
+    float* dot_product,
+    float* exp_sum)
 {
   constexpr int n = {{ n }};
   constexpr int d = {{ d }};
@@ -81,9 +81,9 @@ extern "C" __global__ void attention_kernel1(
 }
 
 extern "C" __global__ void attention_kernel2(
-    const float* __restrict__ exp_sum,
-    const float* __restrict__ dot_product,
-    float* __restrict__ score)
+    const float* exp_sum,
+    const float* dot_product,
+    float* score)
 {
   constexpr int n = {{ n }};
   int bidx = blockIdx.x;
@@ -96,9 +96,9 @@ extern "C" __global__ void attention_kernel2(
 }
 
 extern "C" __global__ void attention_kernel3(
-    const float* __restrict__ score,
-    const float* __restrict__ value,
-    float* __restrict__ output)
+    const float* score,
+    const float* value,
+    float* output)
 {
   constexpr int n = {{ n }};
   constexpr int d = {{ d }};

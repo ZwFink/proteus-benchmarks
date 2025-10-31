@@ -47,25 +47,25 @@ __global__ void fasten_main(
     const size_t nposes,
     const size_t natlig,
     const size_t natpro,
-    const float *__restrict__ protein_x,
-    const float *__restrict__ protein_y,
-    const float *__restrict__ protein_z,
-    const int32_t *__restrict__ protein_type,
-    const float *__restrict__ ligand_x,
-    const float *__restrict__ ligand_y,
-    const float *__restrict__ ligand_z,
-    const int32_t *__restrict__ ligand_type,
-    const float *__restrict__ transforms_0,
-    const float *__restrict__ transforms_1,
-    const float *__restrict__ transforms_2,
-    const float *__restrict__ transforms_3,
-    const float *__restrict__ transforms_4,
-    const float *__restrict__ transforms_5,
-    const int32_t *__restrict__ ff_hbtype,
-    const float *__restrict__ ff_radius,
-    const float *__restrict__ ff_hphb,
-    const float *__restrict__ ff_elsc,
-    float *__restrict__ etotals);
+    const float * protein_x,
+    const float * protein_y,
+    const float * protein_z,
+    const int32_t * protein_type,
+    const float * ligand_x,
+    const float * ligand_y,
+    const float * ligand_z,
+    const int32_t * ligand_type,
+    const float * transforms_0,
+    const float * transforms_1,
+    const float * transforms_2,
+    const float * transforms_3,
+    const float * transforms_4,
+    const float * transforms_5,
+    const int32_t * ff_hbtype,
+    const float * ff_radius,
+    const float * ff_hphb,
+    const float * ff_elsc,
+    float * etotals);
 
 double elapsedMillis( const TimePoint &start, const TimePoint &end){
   auto elapsedNs = static_cast<double>(
@@ -80,7 +80,7 @@ void printTimings(const Params &params, double millis) {
   double runtime = ms * 1e-3;
 
   // Compute FLOP/s
-  double ops_per_wg = params.posesPerWI * 27 + params.natlig * (3 + params.posesPerWI * 18 + 
+  double ops_per_wg = params.posesPerWI * 27 + params.natlig * (3 + params.posesPerWI * 18 +
       params.natpro * (11 + params.posesPerWI * 30)) + params.posesPerWI;
   double total_ops = ops_per_wg * ((double) params.nposes / params.posesPerWI);
   double flops = total_ops / runtime;
@@ -448,7 +448,7 @@ int main(int argc, char *argv[]) {
     if (diff > maxdiff) maxdiff = diff;
   }
   std::cout << "Largest difference was " <<
-    std::setprecision(3) << (100 * maxdiff) << "%.\n\n"; 
+    std::setprecision(3) << (100 * maxdiff) << "%.\n\n";
   // Expect numbers to be accurate to 2 decimal places
   refEnergies.close();
 

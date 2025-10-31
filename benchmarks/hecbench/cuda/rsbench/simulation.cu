@@ -17,11 +17,11 @@ __global__
     __attribute__((annotate("jit", 9, 10, 11, 12, 13, 14)))
 #endif
     void
-    lookup(const int *__restrict__ num_nucs, const double *__restrict__ concs,
-           const int *__restrict__ mats, int *__restrict__ verification,
-           const int *__restrict__ n_windows,
-           const double *__restrict__ pseudo_K0RS,
-           const Window *__restrict__ windows, const Pole *__restrict__ poles,
+    lookup(const int * num_nucs, const double * concs,
+           const int * mats, int * verification,
+           const int * n_windows,
+           const double * pseudo_K0RS,
+           const Window * windows, const Pole * poles,
            int n_lookups, int input_doppler, int input_numL,
            int max_num_windows, int max_num_poles, int max_num_nucs) {
 

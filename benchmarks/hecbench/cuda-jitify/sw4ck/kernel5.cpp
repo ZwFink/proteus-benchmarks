@@ -8,18 +8,18 @@ __global__
             const int start2, const int N2, const int ifirst, const int ilast,
             const int jfirst, const int jlast, const int kfirst,
             const int klast, const int nk, const float_sw4 a1,
-            const float_sw4 sgn, const float_sw4 *__restrict__ a_u,
-            const float_sw4 *__restrict__ a_mu,
-            const float_sw4 *__restrict__ a_lambda,
-            const float_sw4 *__restrict__ a_met,
-            const float_sw4 *__restrict__ a_jac, float_sw4 *__restrict__ a_lu,
-            const float_sw4 *__restrict__ a_acof,
-            const float_sw4 *__restrict__ a_bope,
-            const float_sw4 *__restrict__ a_ghcof,
-            const float_sw4 *__restrict__ a_acof_no_gp,
-            const float_sw4 *__restrict__ a_ghcof_no_gp,
-            const float_sw4 *__restrict__ a_strx,
-            const float_sw4 *__restrict__ a_stry) {
+            const float_sw4 sgn, const float_sw4 * a_u,
+            const float_sw4 * a_mu,
+            const float_sw4 * a_lambda,
+            const float_sw4 * a_met,
+            const float_sw4 * a_jac, float_sw4 * a_lu,
+            const float_sw4 * a_acof,
+            const float_sw4 * a_bope,
+            const float_sw4 * a_ghcof,
+            const float_sw4 * a_acof_no_gp,
+            const float_sw4 * a_ghcof_no_gp,
+            const float_sw4 * a_strx,
+            const float_sw4 * a_stry) {
 
   int i = start0 + threadIdx.x + blockIdx.x * blockDim.x;
   int j = start1 + threadIdx.y + blockIdx.y * blockDim.y;

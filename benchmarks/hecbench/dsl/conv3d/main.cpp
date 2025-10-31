@@ -240,7 +240,7 @@ static auto getConv3dS3Kernel(int C_, int M_, int K_, int Hin_, int Win_, int Ho
 }
 
 // Hin = Hout-1+K; max(h+p) is Hin - 1 as max(h) = Hout-1 and max(p) = K-1
-void reference(const float *__restrict__ X, const float *__restrict__ W, float *__restrict__ Y,
+void reference(const float * X, const float * W, float * Y,
                const int N, const int M, const int C, const int K, const int Hin, const int Win,
                const int Hout, const int Wout) {
   for (int n = 0; n < N; n++)

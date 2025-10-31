@@ -36,9 +36,9 @@ typedef enum {
 } adamMode_t;
 
 __launch_bounds__({{ threadsPerBlock }})
-extern "C" __global__ void adam(float *__restrict__ p, float *__restrict__ m,
-                               float *__restrict__ v,
-                               const float *__restrict__ g,
+extern "C" __global__ void adam(float * p, float * m,
+                               float * v,
+                               const float * g,
                                adamMode_t mode) {
   const size_t i = blockIdx.x * blockDim.x + threadIdx.x;
   const size_t totThreads = gridDim.x * blockDim.x;
