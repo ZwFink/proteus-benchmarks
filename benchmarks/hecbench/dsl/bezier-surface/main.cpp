@@ -190,7 +190,7 @@ void BezierCPU(const float *inp,
 
 auto createJitModule(int _NI, int _NJ, int _RESOLUTIONI, int _RESOLUTIONJ) {
   auto J = std::make_unique<JitModule>(TARGET);
-  Timer T;
+  Timer T; T.reset();
   auto KernelHandle =
       J->addKernel<void(float *, float*)>("BezierGPU");
   auto &F = KernelHandle.F;
@@ -360,7 +360,6 @@ size_t in_size   = static_cast<size_t>(in_size_i + 1) * static_cast<size_t>(in_s
 size_t out_size  = out_elems * 3 * sizeof(float);
 
 auto [J, KernelHandle] = createJitModule(in_size_i, in_size_j, out_size_i, out_size_j);
-J->compile();
 
 // Trial loop
 std::vector<double> trial_times;

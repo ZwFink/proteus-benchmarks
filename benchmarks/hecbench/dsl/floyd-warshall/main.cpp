@@ -95,7 +95,7 @@ static void floydWarshallCPUReference(unsigned int * pathDistanceMatrix,
 
 static auto createJitModuleSpecial(unsigned int _numNodes) {
   auto J = std::make_unique<JitModule>(TARGET);
-  Timer T;
+  Timer T; T.reset();
   auto KernelHandle = J->addKernel<void(unsigned int*, unsigned int*, unsigned int, unsigned int)>("floydWarshallPass");
   auto &F = KernelHandle.F;
   auto [pathDistanceBuffer, pathBuffer, numNodes, pass] = F.getArgs();
@@ -197,7 +197,6 @@ int main(int argc, char **argv) {
 
   // JIT compile kernel specialized for this numNodes
   auto [J, KernelHandle] = createJitModuleSpecial(static_cast<unsigned int>(numNodes));
-  J->compile();
 
   // GPU RNG generator
   RandGenerator gen;

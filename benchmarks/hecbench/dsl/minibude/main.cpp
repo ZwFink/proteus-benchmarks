@@ -63,7 +63,7 @@ struct Params {
 
 static auto buildFastenKernel(size_t posesPerWI_, size_t ntypes_, size_t nposes_, size_t natlig_, size_t natpro_) {
   auto JitMod = std::make_unique<JitModule>(TARGET);
-  Timer T;
+  Timer T; T.reset();
   auto KernelHandle = JitMod->addKernel<void(float*,float*,float*,int32_t*,float*,float*,float*,int32_t*,float*,float*,float*,float*,float*,float*,int32_t*, float*, float*, float*, float*)>("fasten_main");
   auto &F = KernelHandle.F;
   F.beginFunction();
@@ -660,8 +660,6 @@ std::vector<float> runKernel(const Params &params) {
             params.nposes * sizeof(float));
 
   auto [JitMod, KernelHandle] = buildFastenKernel(params.posesPerWI, params.ntypes, params.nposes, params.natlig, params.natpro);
-  JitMod->compile();
-  // JitMod->print();
 
   double global = std::ceil(static_cast<double>(params.nposes) /
                             static_cast<double>(params.posesPerWI));

@@ -52,6 +52,7 @@ return output;
 static auto getAttentionKernel1(int n, int d) {
   auto JitMod = std::make_unique<JitModule>(TARGET);
   Timer T;
+  T.reset();
   auto KernelHandle = JitMod->addKernel<void(float*, float*, float*, float*)>("attention_kernel1");
   auto &F = KernelHandle.F;
   {
@@ -104,6 +105,7 @@ static auto getAttentionKernel1(int n, int d) {
 static auto getAttentionKernel2(int n) {
   auto JitMod = std::make_unique<JitModule>(TARGET);
   Timer T;
+  T.reset();
   auto KernelHandle = JitMod->addKernel<void(float*, float*, float*)>("attention_kernel2");
   auto &F = KernelHandle.F;
   {
@@ -141,6 +143,7 @@ static auto getAttentionKernel2(int n) {
 static auto getAttentionKernel3(int n, int d) {
   auto JitMod = std::make_unique<JitModule>(TARGET);
   Timer T;
+  T.reset();
   auto KernelHandle = JitMod->addKernel<void(float*, float*, float*)>("attention_kernel3");
   auto &F = KernelHandle.F;
   {
@@ -223,10 +226,9 @@ float* attention_device(float* key, float* value, float* query,
   auto [JitMod2, KernelHandle2] = getAttentionKernel2(n);
   auto [JitMod3, KernelHandle3] = getAttentionKernel3(n, d);
 
-  JitMod1->compile();
-  JitMod2->compile();
-  JitMod3->compile();
-
+  // JitMod1->compile();
+  // JitMod2->compile();
+  // JitMod3->compile();
   gpuDeviceSynchronize();
 
   auto start = std::chrono::steady_clock::now();

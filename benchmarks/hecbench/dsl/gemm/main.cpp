@@ -26,6 +26,7 @@ using namespace builtins::gpu;
 static auto getMatmulKernel(int N, int TileSize) {
   auto JitMod = std::make_unique<JitModule>(TARGET);
   Timer T;
+  T.reset();
   auto KernelHandle =
       JitMod->addKernel<void(double *, double *, double *)>("tiled_matmul");
     auto &F = KernelHandle.F;
@@ -79,6 +80,7 @@ static auto getMatmulKernel(int N, int TileSize) {
 static auto getRegSharedTiledMatmulKernel(int N, int blockTileM, int blockTileN, int kTile, int regTileM, int regTileN) {
   auto JitMod = std::make_unique<JitModule>(TARGET);
   Timer T;
+  T.reset();
   auto KernelHandle =
       JitMod->addKernel<void(double *, double *, double *)>("reg_shared_tiled_matmul");
   auto &F = KernelHandle.F;
@@ -353,7 +355,6 @@ int main(int argc, char** argv) {
   // Kernel execution based on type
   if (KernelType == "gpu_regtiled") {
     auto [JitMod, KernelHandle] = getRegSharedTiledMatmulKernel(N, blockTileMArg, blockTileNArg, kTileArg, RegTileM, RegTileN);
-    JitMod->compile();
     (void)KernelHandle.launch({static_cast<unsigned int>(N / blockTileNArg), static_cast<unsigned int>(N / blockTileMArg), 1u}, {static_cast<unsigned int>(blockTileNArg / RegTileN), static_cast<unsigned int>(blockTileMArg / RegTileM), 1u}, 0, nullptr, CD, AD, BD);
     gpuErrCheck(gpuDeviceSynchronize());
 
@@ -375,7 +376,6 @@ int main(int argc, char** argv) {
 
   } else if (KernelType == "jit") {
     auto [JitMod, KernelHandle] = getMatmulKernel(N, MatmulTileSize);
-    JitMod->compile();
     (void)KernelHandle.launch({(N + MatmulTileSize - 1) / MatmulTileSize, (N + MatmulTileSize - 1) / MatmulTileSize, 1}, {MatmulTileSize, MatmulTileSize, 1}, 0, nullptr, CD, AD, BD);
     gpuErrCheck(gpuDeviceSynchronize());
 

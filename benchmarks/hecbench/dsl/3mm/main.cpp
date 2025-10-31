@@ -19,7 +19,7 @@ using namespace builtins::gpu;
 // Naive tiled JIT kernel (C = A x B) for square N x N, double.
 static auto getMatmulKernel(int N, int TileSize) {
   auto JitMod = std::make_unique<JitModule>(TARGET);
-  Timer T;
+  Timer T; T.reset();
   auto KernelHandle = JitMod->addKernel<void(double *, double *, double *)>("tiled_matmul");
   auto &F = KernelHandle.F;
   {
@@ -68,7 +68,7 @@ static auto getMatmulKernel(int N, int TileSize) {
 // 4x4 per-thread micro-tile, K tile = 8 (defaults; overridable via CLI).
 static auto getRegSharedTiledMatmulKernel(int N, int blockTileM, int blockTileN, int kTile, int regTileM, int regTileN) {
   auto JitMod = std::make_unique<JitModule>(TARGET);
-  Timer T;
+  Timer T; T.reset();
   auto KernelHandle = JitMod->addKernel<void(double *, double *, double *)>("reg_shared_tiled_matmul");
   auto &F = KernelHandle.F;
   {
@@ -328,7 +328,6 @@ int main(int argc, char** argv) {
 
   if (KernelType == "gpu_regtiled") {
     auto [JitMod, KernelHandle] = getRegSharedTiledMatmulKernel(N, blockTileMArg, blockTileNArg, kTileArg, RegTileM, RegTileN);
-    JitMod->compile();
 
     unsigned int gridX = static_cast<unsigned int>(N / blockTileNArg);
     unsigned int gridY = static_cast<unsigned int>(N / blockTileMArg);
@@ -359,7 +358,6 @@ int main(int argc, char** argv) {
 
   } else {
     auto [JitMod, KernelHandle] = getMatmulKernel(N, MatmulTileSize);
-    JitMod->compile();
 
     unsigned int gridX = static_cast<unsigned int>((N + MatmulTileSize - 1) / MatmulTileSize);
     unsigned int gridY = static_cast<unsigned int>((N + MatmulTileSize - 1) / MatmulTileSize);
