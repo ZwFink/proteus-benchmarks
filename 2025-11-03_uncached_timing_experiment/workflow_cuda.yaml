@@ -1,0 +1,57 @@
+# Select scheduler backend: flux or slurm
+scheduler: flux
+
+proteus:
+  # Update these paths to match your Proteus install before running the workflow.
+  path: /usr/workspace/fink12/proteus/proteus/install-matrix-cuda-12.2.2
+  cc: /usr/workspace/fink12/miniconda3_tioga/envs/proteus_matrix/bin/clang++
+
+driver:
+  # `driver.py` is resolved relative to this repo by default; override if needed.
+  descriptor: hecbench.toml
+  runconfigs:
+    proteus: presets/proteus.toml
+    aot: presets/aot.toml
+    dsl: presets/dsl.toml
+    cpp: presets/cpp.toml
+  results_dir: results_nvidia
+  reps: 5
+
+workflow:
+  benchmarks:
+    - adam
+    - attention
+    - conv3d
+    - gemm
+    - 3mm
+    - floyd-warshall
+    - minibude
+    - bezier-surface
+  execution_modes:
+    - dsl
+    - aot
+    - proteus
+    - cpp
+  machines:
+    - nvidia
+  prof_modes:
+    - direct
+
+slurm:
+  options:
+    - --nodes=1
+    - --time=00:15:00
+    - --partition=pbatch
+      #- --tasks-per-node=1
+      #- --gpus-per-task=1
+    - --exclusive
+  env: {}
+flux:
+  options:
+    - -N
+    - "1"
+    - --time=25m
+    - --queue=pbatch
+    - --exclusive
+  env:
+    CPLUS_INCLUDE_PATH: /opt/rocm-6.4.0/include

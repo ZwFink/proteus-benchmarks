@@ -50,9 +50,9 @@ AXIS_TITLE_Y_SIZE: int = 25
 
 STAGE_DEFINITIONS: OrderedDict[str, tuple[str, str]] = OrderedDict(
     [
-        ("specialized_median_ms", ("Specialization", "#FFB000")),
-        ("optimized_median_ms", ("Optimized IR Gen", "#AA66FF")),
-        ("device_median_ms", ("Device Kernel Gen", "#66CCFE")),
+        ("specialized_median_ms", ("SKC", "#FFB000")),
+        ("optimized_median_ms", ("Optim. IR Gen.", "#AA66FF")),
+        ("device_median_ms", ("Dev. Kernel Gen.", "#66CCFE")),
     ]
 )
 
@@ -298,6 +298,8 @@ def build_plot(df: pd.DataFrame, figure_size: tuple[float, float]) -> ggplot:
             panel_grid_major_x=element_blank(),
             panel_grid_minor_x=element_blank(),
             panel_grid_major_y=element_blank(),
+            legend_direction="horizontal",
+            legend_position="top",
         )
         + guides(
             fill=guide_legend(title=None, reverse=False),
