@@ -16,12 +16,16 @@ from typing import Iterable
 
 import numpy as np
 import pandas as pd
-from matplotlib import use as mpl_use
+from matplotlib import use as mpl_use, rcParams
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch, Rectangle
+from matplotlib.legend_handler import HandlerPatch
 from plotnine import *
 
-mpl_use("Agg")
+mpl_use("pdf")
+rcParams["pdf.fonttype"] = 42  # Preserve text as TrueType for Illustrator edits.
+rcParams["ps.fonttype"] = 42
+rcParams["pdf.use14corefonts"] = False
 
 FRONTEND_LABELS: dict[str, str] = {
     "aot": "AoT",
@@ -299,7 +303,7 @@ def build_plot(df: pd.DataFrame, figure_size: tuple[float, float]) -> ggplot:
             panel_grid_minor_x=element_blank(),
             panel_grid_major_y=element_blank(),
             legend_direction="horizontal",
-            legend_position="top",
+            legend_position=(-0.20, 1.08),
         )
         + guides(
             fill=guide_legend(title=None, reverse=False),
@@ -372,9 +376,11 @@ def _apply_hatching_and_legends(fig, df: pd.DataFrame) -> None:
             handles,
             [handle.get_label() for handle in handles],
             title="",
-            loc="upper left",
-            bbox_to_anchor=(1.12, 0.3),
+            loc="lower left",
+            bbox_to_anchor=(0.43, 0.98),
             frameon=False,
+            ncols=3,
+            prop={'weight': 'normal', 'size': AXIS_TEXT_SIZE},
         )
         ax.add_artist(approach_legend)
 
