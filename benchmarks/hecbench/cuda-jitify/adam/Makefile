@@ -55,6 +55,7 @@ $(program): $(obj) Makefile
 
 clean:
 	rm -rf *.x *.o
+	rm -rf .proteus
 
 run: $(program)
 	$(LAUNCHER) ./$(program) 10000 200 100

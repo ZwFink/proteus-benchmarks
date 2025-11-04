@@ -8,6 +8,9 @@ DEBUG          = no
 PROTEUS_PATH  ?= /path/to/proteus/install
 ENABLE_PROTEUS ?= no
 
+# Simple timing helper; override TIME env var to change format/tool.
+TIME ?= /usr/bin/env time -f '%E real => $@'
+
 ###############################################################################
 # Program name & source code list
 ###############################################################################
@@ -39,11 +42,10 @@ ifeq ($(OPTIMIZE),yes)
 endif
 
 ifeq ($(ENABLE_PROTEUS),yes)
-  CFLAGS += -fpass-plugin=${PROTEUS_PATH}/lib64/libProteusPass.so -DENABLE_PROTEUS -DPROTEUS_ENABLED
+  CFLAGS += -DENABLE_PROTEUS -DPROTEUS_ENABLED -fpass-plugin=${PROTEUS_PATH}/lib64/libProteusPass.so
   LDFLAGS += -Wl,-rpath,${PROTEUS_PATH}/lib64 -L${PROTEUS_PATH}/lib64/ -lproteus \
              -L${ROCM_PATH}/lib -L${ROCM_PATH}/llvm/lib \
              -Wl,--start-group \
-             $(shell ls ${ROCM_PATH}/llvm/lib/libclang*.a) \
              $(shell ${ROCM_PATH}/llvm/bin/llvm-config --libs) \
              -Wl,--end-group \
              $(shell ${ROCM_PATH}/llvm/bin/llvm-config --system-libs) \
@@ -55,10 +57,10 @@ endif
 ###############################################################################
 
 $(program): $(obj) Makefile
-	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
+	@$(TIME) -f 'link %E real' $(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
 %$(SUFFIX).o: %.cu bude.h Makefile
-	$(CC) $(CFLAGS) -x hip -c $< -o $@
+	@$(TIME) -f 'compile %E real' $(CC) $(CFLAGS) -x hip -c $< -o $@
 
 .PHONY: clean run
 

@@ -8,6 +8,9 @@ OPTIMIZE  = yes
 DEBUG     = no
 PROTEUS_PATH  ?= /path/to/proteus/install
 
+# Simple timing helper; override TIME env var to change format/tool.
+TIME ?= /usr/bin/env time -f '%E real => $@'
+
 #===============================================================================
 # Program name & source code list
 #===============================================================================
@@ -84,10 +87,10 @@ endif
 #===============================================================================
 
 $(program): $(obj) Makefile
-	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
+	@$(TIME) -f 'link %E real' $(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
 %$(SUFFIX).o: %.cpp Makefile
-	$(CC) $(CFLAGS) $(LANG_FLAG) -c $< -o $@
+	@$(TIME) -f 'compile %E real' $(CC) $(CFLAGS) $(LANG_FLAG) -c $< -o $@
 
 clean:
 	rm -rf *.x *.o *.ll *.bc .proteus

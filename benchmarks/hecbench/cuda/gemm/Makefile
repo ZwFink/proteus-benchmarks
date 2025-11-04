@@ -2,7 +2,7 @@
 # User Options
 #===============================================================================
 
-CC        ?= ${PROTEUS_CC}
+CC        = ${PROTEUS_CC}
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      ?= sm_90
@@ -10,6 +10,9 @@ LAUNCHER  =
 PROTEUS_PATH  ?= ${PROTEUS_INSTALL_PATH}
 ENABLE_PROTEUS ?= no
 CUDA_HOME ?= /usr/local/cuda
+
+# Simple timing helper; override TIME env var to change format/tool.
+TIME ?= /usr/bin/env time -f '%E real => $@'
 
 #===============================================================================
 # Program name & source code list
@@ -32,7 +35,7 @@ obj = $(source:.cu=$(SUFFIX).o)
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall \
           -I${PROTEUS_PATH}/include \
           --cuda-gpu-arch=$(ARCH) --cuda-path=${CUDA_HOME} \
-          -DPROTEUS_ENABLE_CUDA
+          -DPROTEUS_ENABLE_CUDA 
 
 LDFLAGS = -Wl,-rpath,${CUDA_HOME}/lib64 -L${CUDA_HOME}/lib64 \
           -L${CUDA_HOME}/lib64/stubs \
@@ -61,10 +64,10 @@ endif
 #===============================================================================
 
 $(program): $(obj) Makefile
-	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
+	@$(TIME) -f 'link %E real' $(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
 %$(SUFFIX).o: %.cu Makefile
-	$(CC) $(CFLAGS) -c $< -o $@
+	@$(TIME) -f 'compile %E real' $(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: clean run
 

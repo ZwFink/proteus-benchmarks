@@ -38,3 +38,4 @@ lulesh-comms-gpu$(SUFFIX).o: lulesh-comms-gpu.cu
 
 clean: 
 	rm -rf *.x *.o xyz.asc regNumList.txt
+	rm -rf .proteus

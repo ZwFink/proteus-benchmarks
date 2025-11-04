@@ -10,6 +10,9 @@ CUDA_HOME      ?= /usr/local/cuda
 PROTEUS_PATH   ?= ${PROTEUS_INSTALL_PATH}
 ENABLE_PROTEUS ?= no
 
+# Simple timing helper; override TIME env var to change format/tool.
+TIME ?= /usr/bin/env time -f '%E real => $@'
+
 ifeq ($(ENABLE_PROTEUS),yes)
   SUFFIX = -proteus
 else
@@ -56,10 +59,10 @@ endif
 ###############################################################################
 
 $(program): $(obj) Makefile
-	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
+	@$(TIME) -f 'link %E real' $(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
 %$(SUFFIX).o: %.cu Makefile
-	$(CC) $(CFLAGS) -c $< -o $@
+	@$(TIME) -f 'compile %E real' $(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: clean run
 

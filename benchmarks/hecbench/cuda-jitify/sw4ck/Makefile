@@ -65,6 +65,7 @@ curvilinear4sg$(SUFFIX).o : curvilinear4sg.cu \
 
 clean:
 	rm -rf *.x *.o
+	rm -rf .proteus
 
 run: $(program)
 	$(LAUNCHER) ./$(program) sw4ck.in 100

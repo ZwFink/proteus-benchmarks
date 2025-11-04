@@ -13,6 +13,8 @@ LLVM_INSTALL_DIR ?= ${ROCM_PATH}/llvm
 LLVM_CONFIG     ?= ${LLVM_INSTALL_DIR}/bin/llvm-config
 CUDA_PATH       ?= ${CUDA_HOME}
 CUDA_ARCH       ?= sm_90
+# Simple timing helper; override TIME env var to change format/tool.
+TIME ?= /usr/bin/env time -f '%E real => $@'
 
 ###############################################################################
 # Program name & source code list
@@ -105,10 +107,10 @@ endif
 ###############################################################################
 
 $(program): $(obj) Makefile
-	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
+	@$(TIME) -f 'link %E real' $(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
 %.o: %.cpp Makefile
-	$(CC) $(CFLAGS) $(LANG_FLAG) -c $< -o $@
+	@$(TIME) -f 'compile %E real' $(CC) $(CFLAGS) $(LANG_FLAG) -c $< -o $@
 
 .PHONY: clean run run_tiled
 

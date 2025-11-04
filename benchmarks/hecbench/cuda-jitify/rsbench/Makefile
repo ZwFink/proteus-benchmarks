@@ -63,6 +63,7 @@ $(program): $(obj) rsbench.h Makefile
 
 clean:
 	rm -rf *.x *.o
+	rm -rf .proteus
 
 run: $(program)
 	$(LAUNCHER) ./$(program) -s large -m event

@@ -10,6 +10,10 @@ ARCH      ?= sm_90
 LAUNCHER  =
 PROTEUS_PATH    ?=/path/to/proteus/install
 ENABLE_PROTEUS ?= no
+CUDA_HOME ?= /usr/local/cuda
+
+# Simple timing helper; override TIME env var to change format/tool.
+TIME ?= /usr/bin/env time -f '%E real => $@'
 
 #===============================================================================
 # Program name & source code list
@@ -32,10 +36,12 @@ obj = $(source:.cu=$(SUFFIX).o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := -DMKX=4 -std=c++14 -Xcompiler -Wall --offload-arch=$(ARCH) --cuda-path=${CUDA_HOME}
+CFLAGS := -DMKX=4 -std=c++14 -Xcompiler -Wall --offload-arch=$(ARCH) --cuda-path=${CUDA_HOME} \
+          -DPROTEUS_ENABLE_CUDA
 
 # Linker Flags
 LDFLAGS = -Wl,-rpath,${CUDA_HOME}/lib64 -L${CUDA_HOME}/lib64 \
+          -L${CUDA_HOME}/lib64/stubs \
 	  -lcuda -lcudadevrt -lcudart_static -lrt -lpthread -ldl
 
 
@@ -63,13 +69,14 @@ endif
 #===============================================================================
 
 $(program): $(obj) Makefile
-	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
+	@$(TIME) -f 'link %E real' $(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
 %$(SUFFIX).o: %.cu kernel.h spt.h constants.h utils.h Makefile
-	$(CC) $(CFLAGS) -c $< -o $@
+	@$(TIME) -f 'compile %E real' $(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
+	rm -rf .proteus
 
 run: $(program)
 	$(LAUNCHER) ./$(program) 10
