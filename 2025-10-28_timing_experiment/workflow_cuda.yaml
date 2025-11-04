@@ -13,6 +13,7 @@ driver:
     proteus: proteus.toml
     dsl: dsl.toml
     cpp: cpp.toml
+    aot: aot.toml
   results_dir: results_nvidia
   reps: 20
 

@@ -14,6 +14,7 @@ driver:
     proteus: proteus.toml
     dsl: dsl.toml
     cpp: cpp.toml
+    aot: aot.toml
   results_dir: results_amd
   # Do many reps (they will be fast) to get good timing data
   reps: 20
