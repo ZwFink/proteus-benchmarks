@@ -178,17 +178,17 @@ def build_plot(df: pd.DataFrame) -> ggplot:
             # axis_text_x=element_text(rotation=45, ha="right", size=12),
             axis_text_x=element_blank(),
             axis_ticks_major_x=element_blank(),
-            axis_text_y=element_text(size=12),
-            axis_title_y=element_text(size=18),
+            axis_text_y=element_text(size=22),
+            axis_title_y=element_text(size=32),
             axis_title_x=element_text(size=14),
             legend_position="top",
             legend_direction="horizontal",
             panel_grid_major_x=element_blank(),
             panel_grid_minor_x=element_blank(),
             panel_grid_major_y=element_blank(),
-            figure_size=(12, 6),
+            figure_size=(11, 9),
             strip_text=element_text(size=14, weight="bold"),
-            legend_text=element_text(size=15),
+            legend_text=element_text(size=18),
         )
     )
 
