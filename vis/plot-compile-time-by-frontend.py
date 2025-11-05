@@ -196,7 +196,7 @@ def build_plot(df: pd.DataFrame) -> ggplot:
         + theme_seaborn(style="whitegrid")
         + theme(
             axis_text_x=element_text(rotation=45, ha="right", size=16),
-            figure_size=(10, 5),
+            figure_size=(6.4, 4.8),
             legend_position="top",
             legend_direction="horizontal",
             panel_grid_major_x=element_blank(),
