@@ -33,19 +33,19 @@ FRONTEND_LABELS = {
 FRONTEND_ORDER = ["aot", "proteus", "dsl", "cpp"]
 
 FRONTEND_COLORS = {
-    "PJ-Annot.": "#000000",
-    "PJ-CPP": "#FF0066",
-    "PJ-DSL": "#107F80",
-    "AoT": '#40007F'
+    "PJ-Annot.": "#0077BB",
+    "PJ-DSL": "#009988",
+    "PJ-CPP": "#33BBEE",
+    "AoT": '#FF7F0E'
 }
 
 BENCHMARK_LABELS = {
     "3mm": "3mm",
     "adam": "Adam",
     "attention": "Attention",
-    "bezier-surface": "Bezier-Surf.",
+    "bezier-surface": "Bezier\nSurface",
     "conv3d": "Conv3D",
-    "floyd-warshall": "Floyd-Warsh.",
+    "floyd-warshall": "Floyd\nWarshall",
     "gemm": "GEMM",
     "minibude": "MiniBUDE",
 }
@@ -75,6 +75,12 @@ def parse_args() -> argparse.Namespace:
         "--platform",
         default=None,
         help="Optional platform prefix to filter on (for example 'amd').",
+    )
+    parser.add_argument(
+        "--show-legend",
+        default=False,
+        action="store_true",
+        help="Show/hide legend in the plots.",
     )
     return parser.parse_args()
 
@@ -172,7 +178,7 @@ def prepare_labels(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def build_plot(df: pd.DataFrame) -> ggplot:
+def build_plot(df: pd.DataFrame, show_legend:bool = False) -> ggplot:
     if df.empty:
         raise RuntimeError("No compile time data available after filtering.")
 
@@ -195,16 +201,18 @@ def build_plot(df: pd.DataFrame) -> ggplot:
         + labs(x="", y="Compile Time (s)", fill="")
         + theme_seaborn(style="whitegrid")
         + theme(
-            axis_text_x=element_text(rotation=45, ha="right", size=16),
-            figure_size=(6.4, 4.8),
-            legend_position="top",
+            axis_text_x=element_text(rotation=-30, ha="center", size=14, weight="bold"),
+            figure_size=(8.0, 4.0),
+            legend_position="top" if show_legend else "none",
             legend_direction="horizontal",
             panel_grid_major_x=element_blank(),
             panel_grid_minor_x=element_blank(),
             panel_grid_major_y=element_blank(),
-            axis_title_y=element_text(size=25),
+            axis_title_y=element_text(size=18),
             axis_title_x=element_text(size=18),
             axis_text_y=element_text(size=16),
+            legend_text=element_text(size=16),
+            legend_key_size=16,
         )
     )
 
@@ -239,7 +247,7 @@ def main() -> None:
     if df.empty:
         raise RuntimeError("Compile time aggregation produced no data.")
 
-    plot = build_plot(df)
+    plot = build_plot(df, args.show_legend)
 
     output_dir = args.output_dir or results_dir
     output_dir.mkdir(parents=True, exist_ok=True)
