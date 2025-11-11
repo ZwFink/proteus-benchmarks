@@ -38,9 +38,9 @@ BENCHMARK_LABELS: dict[str, str] = {
     "3mm": "3mm",
     "adam": "Adam",
     "attention": "Attention",
-    "bezier-surface": "Bezier-Surf.",
+    "bezier-surface": "Bezier\nSurface",
     "conv3d": "Conv3D",
-    "floyd-warshall": "Floyd-Warsh.",
+    "floyd-warshall": "Floyd\nWarshall",
     "gemm": "GEMM",
     "minibude": "MiniBUDE",
 }
@@ -48,19 +48,19 @@ BENCHMARK_LABELS: dict[str, str] = {
 
 FRONTEND_ORDER: list[str] = ["aot", "proteus", "dsl", "cpp"]
 
-AXIS_TEXT_SIZE: int = 16
+AXIS_TEXT_SIZE: int = 18
 AXIS_TITLE_X_SIZE: int = 18
 AXIS_TITLE_Y_SIZE: int = 25
 
 STAGE_DEFINITIONS: OrderedDict[str, tuple[str, str]] = OrderedDict(
     [
-        ("specialized_median_ms", ("SKC", "#FFB000")),
-        ("optimized_median_ms", ("Optim. IR Gen.", "#AA66FF")),
-        ("device_median_ms", ("Dev. Kernel Gen.", "#66CCFE")),
+        ("specialized_median_ms", ("KS", "#FFB000")),
+        ("optimized_median_ms", ("SKO", "#AA66FF")),
+        ("device_median_ms", ("DC", "#66CCFE")),
     ]
 )
 
-HATCH_PATTERNS: tuple[str, ...] = ("///", "\\\\", "..", "++", "xx", "--", "**")
+HATCH_PATTERNS: tuple[str, ...] = ("", "///", "\\\\", "..", "++", "xx", "--", "**")
 
 
 def parse_args() -> argparse.Namespace:
@@ -92,7 +92,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--figure-width",
         type=float,
-        default=11.0,
+        default=12.0,
         help="Figure width in inches (default: 11.0).",
     )
     parser.add_argument(
@@ -106,6 +106,12 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=300,
         help="Resolution for the raster output (default: 300).",
+    )
+    parser.add_argument(
+        "--show-legend",
+        default=False,
+        action="store_true",
+        help="Show/hide legend in the plots.",
     )
     return parser.parse_args()
 
@@ -239,7 +245,9 @@ def _format_benchmark_label(name: str) -> str:
 def _compute_positions(
     df: pd.DataFrame, benchmarks: list[str], approaches: list[str]
 ) -> dict[str, np.ndarray | float]:
-    bench_to_index = {name: idx for idx, name in enumerate(benchmarks)}
+    #bench_to_index = {name: idx for idx, name in enumerate(benchmarks)}
+    group_spacing = 1.2
+    bench_to_index = {name: idx * group_spacing for idx, name in enumerate(benchmarks)}
     num_approaches = len(approaches)
     if num_approaches <= 0:
         raise ValueError("At least one JIT approach is required to plot the chart.")
@@ -273,7 +281,7 @@ def _compute_positions(
     }
 
 
-def build_plot(df: pd.DataFrame, figure_size: tuple[float, float]) -> ggplot:
+def build_plot(df: pd.DataFrame, figure_size: tuple[float, float], show_legend:bool = False) -> ggplot:
     stage_labels = [entry[0] for entry in STAGE_DEFINITIONS.values()]
     stage_colors = [entry[1] for entry in STAGE_DEFINITIONS.values()]
 
@@ -292,7 +300,7 @@ def build_plot(df: pd.DataFrame, figure_size: tuple[float, float]) -> ggplot:
         + theme_seaborn(style="whitegrid")
         + theme(
             figure_size=figure_size,
-            axis_text_x=element_text(rotation=45, ha="right", size=AXIS_TEXT_SIZE),
+            axis_text_x=element_text(rotation=-30, ha="center", size=AXIS_TEXT_SIZE, weight="bold"),
             axis_text_y=element_text(size=AXIS_TEXT_SIZE),
             axis_title_x=element_text(size=AXIS_TITLE_X_SIZE),
             axis_title_y=element_text(size=AXIS_TITLE_Y_SIZE),
@@ -303,7 +311,7 @@ def build_plot(df: pd.DataFrame, figure_size: tuple[float, float]) -> ggplot:
             panel_grid_minor_x=element_blank(),
             panel_grid_major_y=element_blank(),
             legend_direction="horizontal",
-            legend_position=(-0.20, 1.08),
+            legend_position=(0.0, 1.08) if show_legend else "none",
         )
         + guides(
             fill=guide_legend(title=None, reverse=False),
@@ -313,7 +321,7 @@ def build_plot(df: pd.DataFrame, figure_size: tuple[float, float]) -> ggplot:
     return plot
 
 
-def _apply_hatching_and_legends(fig, df: pd.DataFrame) -> None:
+def _apply_hatching_and_legends(fig, df: pd.DataFrame, show_legend: bool=False) -> None:
     if not fig.axes:
         return
 
@@ -371,22 +379,22 @@ def _apply_hatching_and_legends(fig, df: pd.DataFrame) -> None:
         if label in approach_hatches
     ]
 
-    if handles:
-        approach_legend = ax.legend(
-            handles,
-            [handle.get_label() for handle in handles],
-            title="",
-            loc="lower left",
-            bbox_to_anchor=(0.43, 0.98),
-            frameon=False,
-            ncols=3,
-            prop={'weight': 'normal', 'size': AXIS_TEXT_SIZE},
-        )
-        ax.add_artist(approach_legend)
+    if show_legend:
+        if handles:
+            approach_legend = ax.legend(
+                handles,
+                [handle.get_label() for handle in handles],
+                title="",
+                loc="lower left",
+                bbox_to_anchor=(0.43, 0.98),
+                frameon=False,
+                ncols=3,
+                prop={'weight': 'normal', 'size': AXIS_TEXT_SIZE},
+            )
+            ax.add_artist(approach_legend)
 
-    if stage_legend is not None:
-        ax.add_artist(stage_legend)
-
+        if stage_legend is not None:
+            ax.add_artist(stage_legend)
 
 def _build_hatch_map(approaches: list[str]) -> dict[str, str]:
     pattern_cycle = HATCH_PATTERNS
@@ -404,12 +412,13 @@ def save_plot(
     width: float,
     height: float,
     dpi: int,
+    show_legend: bool=False,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     for extension in ("pdf", "png"):
         destination = output_dir / f"{basename}.{extension}"
         fig = plot.draw(show=False)
-        _apply_hatching_and_legends(fig, data)
+        _apply_hatching_and_legends(fig, data, show_legend)
         save_kwargs = {"bbox_inches": "tight"}
         if extension == "png":
             save_kwargs["dpi"] = dpi
@@ -428,7 +437,7 @@ def main() -> None:
     plot_df = prepare_dataframe(df, platform)
 
     output_dir = args.output_dir or csv_path.parent
-    plot = build_plot(plot_df, (args.figure_width, args.figure_height))
+    plot = build_plot(plot_df, (args.figure_width, args.figure_height), args.show_legend)
 
     save_plot(
         plot,
@@ -438,6 +447,7 @@ def main() -> None:
         args.figure_width,
         args.figure_height,
         args.dpi,
+        args.show_legend,
     )
 
 
