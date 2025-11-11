@@ -1,0 +1,9 @@
+[[aot]]
+profmode = "direct"
+[[aot.env]]
+# Force re-compilation within the driver script
+PROTEUS_USE_STORED_CACHE = "0"
+
+#[[aot]]
+#profmode = "metrics"
+#[[aot.env]]

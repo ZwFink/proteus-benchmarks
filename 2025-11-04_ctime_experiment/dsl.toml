@@ -1,0 +1,11 @@
+[[dsl]]
+profmode = "direct"
+[[dsl.env]]
+PROTEUS_USE_STORED_CACHE = "0"
+PROTEUS_ENABLE_TIMERS = "1"
+
+#[[dsl]]
+#profmode = "metrics"
+#[[dsl.env]]
+#PROTEUS_USE_STORED_CACHE = "1"
+#PROTEUS_ENABLE_TIMERS = "1"
