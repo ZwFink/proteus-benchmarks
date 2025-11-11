@@ -43,9 +43,9 @@ BENCHMARK_LABELS: Dict[str, str] = {
     "3mm": "3mm",
     "adam": "Adam",
     "attention": "Attention",
-    "bezier-surface": "Bezier-Surface",
+    "bezier-surface": "Bezier\nSurface",
     "conv3d": "Conv3D",
-    "floyd-warshall": "Floyd-Warshall",
+    "floyd-warshall": "Floyd\nWarshall",
     "gemm": "GEMM",
     "minibude": "MiniBUDE",
 }
@@ -127,6 +127,19 @@ def parse_args() -> argparse.Namespace:
         "--platform",
         choices=("amd", "nvidia"),
         help="Optional platform filter; plots only the specified platform when set.",
+    )
+    parser.add_argument(
+        "--show-legend",
+        default=False,
+        action="store_true",
+        help="Show/hide legend in the plots.",
+    )
+
+    parser.add_argument(
+        "--show-titles",
+        default=False,
+        action="store_true",
+        help="Show/hide titles in the plots.",
     )
     return parser.parse_args()
 
@@ -315,7 +328,7 @@ def _lookup_speedup(
     return float(subset["speedup"].iloc[0])
 
 
-def render_platform_plot(platform_df: pd.DataFrame, platform: str, destination: Path) -> None:
+def render_platform_plot(platform_df: pd.DataFrame, platform: str, destination: Path, show_legend: bool, show_titles: bool) -> None:
     ordered_frontends = list(platform_df["frontend_label"].cat.categories)
     benchmarks = list(platform_df["benchmark_label"].cat.categories)
     if not benchmarks:
@@ -327,7 +340,7 @@ def render_platform_plot(platform_df: pd.DataFrame, platform: str, destination: 
 
     # Match narrow facet layout similar to plotnine grid (about 1.5" per facet).
     fig_width = max(10, 1.55 * ncols + 1.5)
-    fig_height = 4.5
+    fig_height = 3
     fig, axes = plt.subplots(
         nrows=nrows,
         ncols=ncols,
@@ -368,8 +381,9 @@ def render_platform_plot(platform_df: pd.DataFrame, platform: str, destination: 
                     cached_speedup,
                     width=bar_width,
                     color=color,
-                    edgecolor=color,
+                    edgecolor="#111111",
                     linewidth=bar_edge_width,
+                    hatch="",
                     zorder=2,
                 )
 
@@ -381,38 +395,40 @@ def render_platform_plot(platform_df: pd.DataFrame, platform: str, destination: 
                     width=bar_width,
                     color=color,
                     edgecolor="#111111",
+                    #edgecolor=color,
                     linewidth=bar_edge_width,
-                    hatch="//",
+                    hatch="////",
                     zorder=3,
                 )
 
         ax.axhline(1.0, color="#444444", linestyle="--", linewidth=1.6, zorder=4)
 
         strip_height = 0.12
-        ax.add_patch(
-            Rectangle(
-                (0.0, 1.0),
-                1.0,
-                strip_height,
+        #ax.add_patch(
+        #    Rectangle(
+        #        (0.0, 1.0),
+        #        1.0,
+        #        strip_height,
+        #        transform=ax.transAxes,
+        #        facecolor=PLOTNINE_STRIP_FACE,
+        #        edgecolor="none",
+        #        clip_on=False,
+        #        zorder=4,
+        #    )
+        #)
+        if show_titles:
+            ax.text(
+                0.5,
+                1.0 + strip_height / 2,
+                benchmark,
                 transform=ax.transAxes,
-                facecolor=PLOTNINE_STRIP_FACE,
-                edgecolor="none",
-                clip_on=False,
-                zorder=4,
+                ha="center",
+                va="center",
+                fontsize=13,
+                fontweight="bold",
+                #color=PLOTNINE_TEXT_COLOR,
+                zorder=5,
             )
-        )
-        ax.text(
-            0.5,
-            1.0 + strip_height / 2,
-            benchmark,
-            transform=ax.transAxes,
-            ha="center",
-            va="center",
-            fontsize=13,
-            fontweight="bold",
-            color=PLOTNINE_TEXT_COLOR,
-            zorder=5,
-        )
         ax.set_xticks(x_positions)
         ax.set_xticklabels([])
         last_pos = x_positions[-1] if len(x_positions) else 0
@@ -420,8 +436,13 @@ def render_platform_plot(platform_df: pd.DataFrame, platform: str, destination: 
         ax.tick_params(axis="x", length=0)
         ax.tick_params(axis="y", labelsize=11, colors=PLOTNINE_AXIS_COLOR)
         ax.yaxis.set_major_locator(MaxNLocator(nbins=6, prune=None))
+        ax.set_ylim(bottom=.75)
+        #yticks = [1.0] + [y for y in ax.get_yticks() if y >= 1]
+        #yticks=np.linspace(1.0, max(ax.get_yticks()[:-1])+0.25, num=10)
+        #yticks = np.unique(np.round(yticks, 2))  # round for nicer labels
+        #ax.set_yticks(yticks[:-1])
         if idx % ncols == 0:
-            ax.set_ylabel("Speedup", fontsize=13)
+            ax.set_ylabel("Speedup over AoT", fontsize=13)
             ax.yaxis.label.set_color(PLOTNINE_AXIS_COLOR)
 
     # Remove unused axes if benchmarks do not fill the grid.
@@ -433,29 +454,35 @@ def render_platform_plot(platform_df: pd.DataFrame, platform: str, destination: 
         Patch(facecolor=bar_colors[label], edgecolor="none", label=label) for label in ordered_frontends
     ]
     cache_handles = [
-        Patch(facecolor="#CFCFCF", edgecolor="none", label="Cached"),
-        Patch(facecolor="#CFCFCF", edgecolor="#111111", hatch="//", label="Uncached"),
+        Patch(facecolor="#CFCFCF", edgecolor="#111111", hatch="////", label="Uncached"),
+        Patch(facecolor="#CFCFCF", edgecolor="#111111", hatch="", label="Cached"),
     ]
 
     legend_handles = frontend_handles + cache_handles
     legend_labels = [handle.get_label() for handle in legend_handles]
-    legend = fig.legend(
-        handles=legend_handles,
-        labels=legend_labels,
-        loc="upper center",
-        bbox_to_anchor=(0.5, 1.08),
-        ncol=max(2, len(frontend_handles)),
-        frameon=False,
-        columnspacing=1.2,
-        handletextpad=0.6,
-    )
+    if show_legend:
+        legend = fig.legend(
+            handles=legend_handles,
+            labels=legend_labels,
+            loc="upper center",
+            #bbox_to_anchor=(0.5, 1.08),
+            ncol=len(legend_handles),
+            frameon=False,
+            columnspacing=1.2,
+            handletextpad=0.8,
+            fontsize=12,
+            handlelength=2.2,  # width of legend handles
+            handleheight=1.6,  # height of legend handles (matplotlib >=3.3)
+            borderpad=0.6,
+            labelspacing=0.6,
+        )
 
-    fig.suptitle(
-        f"{platform.upper()} Cached vs. Uncached Speedups",
-        fontsize=16,
-        fontweight="bold",
-        y=0.98,
-    )
+    #fig.suptitle(
+    #    f"{platform.upper()} Cached vs. Uncached Speedups",
+    #    fontsize=16,
+    #    fontweight="bold",
+    #    y=0.98,
+    #)
     fig.tight_layout(rect=[0, 0, 1, 0.88])
 
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -508,7 +535,7 @@ def main() -> None:
     for platform in sorted(dataset["platform"].unique()):
         platform_df = prepare_platform_frame(dataset, platform)
         destination = Path(f"{base}-{platform}")
-        render_platform_plot(platform_df, platform, destination)
+        render_platform_plot(platform_df, platform, destination, args.show_legend, args.show_titles)
 
 
 if __name__ == "__main__":
