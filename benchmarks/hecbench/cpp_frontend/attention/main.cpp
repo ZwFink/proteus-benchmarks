@@ -11,7 +11,7 @@
 #include <proteus/CppJitModule.hpp>
 #include <proteus/Logger.hpp>
 #include <proteus/TimeTracing.hpp>
-#include "inja/inja.h"
+#include "mustache/mustache.hpp"
 
 using namespace proteus;
 
@@ -70,8 +70,14 @@ extern "C" __global__ void attention_kernel1(
   constexpr int d = {{ d }};
   int bid = blockIdx.x;
   int tid = threadIdx.x;
+)cpp"
+#ifdef PROTEUS_ENABLE_HIP
+  R"cpp(
   __builtin_assume(bid < ({{ n }} + 255) / 256);
   __builtin_assume(tid < 256);
+  )cpp"
+  #endif
+  R"cpp(
   int i = bid * blockDim.x + tid;
   if (i < n) {
     float sum = 0;
@@ -90,8 +96,15 @@ extern "C" __global__ void attention_kernel2(
   constexpr int n = {{ n }};
   int bidx = blockIdx.x;
   int tidx = threadIdx.x;
+)cpp"
+#ifdef PROTEUS_ENABLE_HIP
+  R"cpp(
   __builtin_assume(bidx < ({{ n }} + 255) / 256);
   __builtin_assume(tidx < 256);
+  )cpp"
+  #endif
+  R"cpp(
+
   int i = bidx * blockDim.x + tidx;
   if (i < n)
     score[i] = __expf(dot_product[i]) / exp_sum[0];
@@ -106,12 +119,24 @@ extern "C" __global__ void attention_kernel3(
   constexpr int d = {{ d }};
   int bidx = blockIdx.x;
   int tidx = threadIdx.x;
+)cpp"
+#ifdef PROTEUS_ENABLE_HIP
+  R"cpp(
   __builtin_assume(bidx < ({{ d }} + 255) / 256);
   __builtin_assume(tidx < 256);
+  )cpp"
+  #endif
+  R"cpp(
   int j = bidx * blockDim.x + tidx;
   if (j < d) {
     float sum = 0;
-    #pragma unroll(16)
+)cpp"
+#ifdef PROTEUS_ENABLE_HIP
+  R"cpp(
+  #pragma unroll(16)
+  )cpp"
+  #endif
+  R"cpp(
     for (int i = 0; i < n; i++)
       sum += score[i] * value[i * d + j];
     output[j] = sum;
@@ -124,8 +149,11 @@ static auto getAttentionKernels(int n, int d)
 {
   Timer specializeTimer;
   specializeTimer.reset();
-  inja::json data = {{"n", n}, {"d", d}};
-  auto kernelSource = inja::render(std::string{StrAttentionKernelsTemplate}, data);
+  kainjow::mustache::data data;
+  data.set("n", std::to_string(n));
+  data.set("d", std::to_string(d));
+  kainjow::mustache::mustache tmpl{std::string{StrAttentionKernelsTemplate}};
+  auto kernelSource = tmpl.render(data);
   const auto specialize_ms = specializeTimer.elapsed();
   Logger::outs("Proteus") << "Specialized Kernel Construction "
                           << specialize_ms << " ms\n";

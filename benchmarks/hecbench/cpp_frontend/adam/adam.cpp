@@ -12,7 +12,7 @@
 #include <string>
 #include <string_view>
 
-#include "inja/inja.h"
+#include "mustache/mustache.hpp"
 
 using namespace proteus;
 
@@ -135,20 +135,20 @@ int main(int argc, char *argv[]) {
 
   Timer specializeTimer;
   specializeTimer.reset();
-  inja::json data = {
-      {"include", std::string(kDeviceInclude)},
-      {"time_loop_start", 1},
-      {"b1", beta1},
-      {"b2", beta2},
-      {"eps", eps},
-      {"grad_scale", grad_scale},
-      {"step_size", step_size},
-      {"time_step", time_step},
-      {"vector_size", vector_size},
-      {"decay", decay},
-      {"threadsPerBlock", threadsPerBlock}
-  };
-  auto kernelSource = inja::render(std::string{StrAdamKernelTemplate}, data);
+  kainjow::mustache::data data;
+  data.set("include", std::string(kDeviceInclude));
+  data.set("time_loop_start", std::to_string(1));
+  data.set("b1", std::to_string(beta1));
+  data.set("b2", std::to_string(beta2));
+  data.set("eps", std::to_string(eps));
+  data.set("grad_scale", std::to_string(grad_scale));
+  data.set("step_size", std::to_string(step_size));
+  data.set("time_step", std::to_string(time_step));
+  data.set("vector_size", std::to_string(vector_size));
+  data.set("decay", std::to_string(decay));
+  data.set("threadsPerBlock", std::to_string(threadsPerBlock));
+  kainjow::mustache::mustache tmpl{std::string{StrAdamKernelTemplate}};
+  auto kernelSource = tmpl.render(data);
 
   const auto specialize_ms = specializeTimer.elapsed();
   Logger::outs("Proteus") << "Specialized Kernel Construction "

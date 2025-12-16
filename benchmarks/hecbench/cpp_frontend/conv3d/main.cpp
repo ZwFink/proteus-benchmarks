@@ -18,7 +18,7 @@
 #include <proteus/CppJitModule.hpp>
 #include <proteus/Logger.hpp>
 #include <proteus/TimeTracing.hpp>
-#include "inja/inja.h"
+#include "mustache/mustache.hpp"
 #include "../../../gpu/gpu_common.h"
 
 using namespace proteus;
@@ -206,19 +206,19 @@ static auto getConv3dKernels(int C, int M, int K, int Hin, int Win, int Hout, in
 {
   Timer specializeTimer;
   specializeTimer.reset();
-  inja::json data = {
-    {"tile_width", TILE_WIDTH},
-    {"C", C},
-    {"M", M},
-    {"K", K},
-    {"Hin", Hin},
-    {"Win", Win},
-    {"Hout", Hout},
-    {"Wout", Wout},
-    {"W_grid", W_grid}
-  };
-  data["device_include"] = kDeviceInclude;
-  auto kernelSource = inja::render(std::string{StrConv3dKernelsTemplate}, data);
+  kainjow::mustache::data data;
+  data.set("tile_width", std::to_string(TILE_WIDTH));
+  data.set("C", std::to_string(C));
+  data.set("M", std::to_string(M));
+  data.set("K", std::to_string(K));
+  data.set("Hin", std::to_string(Hin));
+  data.set("Win", std::to_string(Win));
+  data.set("Hout", std::to_string(Hout));
+  data.set("Wout", std::to_string(Wout));
+  data.set("W_grid", std::to_string(W_grid));
+  data.set("device_include", std::string{kDeviceInclude});
+  kainjow::mustache::mustache tmpl{std::string{StrConv3dKernelsTemplate}};
+  auto kernelSource = tmpl.render(data);
   const auto specialize_ms = specializeTimer.elapsed();
   Logger::outs("Proteus") << "Specialized Kernel Construction "
                           << specialize_ms << " ms\n";

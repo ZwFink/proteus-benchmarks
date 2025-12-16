@@ -18,7 +18,7 @@
 #include <proteus/CppJitModule.hpp>
 #include <proteus/Logger.hpp>
 #include <proteus/TimeTracing.hpp>
-#include "inja/inja.h"
+#include "mustache/mustache.hpp"
 
 #include "../../../gpu/gpu_common.h"
 #include "bude.h"
@@ -511,16 +511,15 @@ std::vector<float> runKernel(const Params &params) {
 
   Timer specializeTimer;
   specializeTimer.reset();
-  inja::json data = {
-      {"include", std::string(kDeviceInclude)},
-      {"max_ppwi", MAX_PPWI},
-      {"posesPerWI", params.posesPerWI},
-      {"nposes", params.nposes},
-      {"natlig", params.natlig},
-      {"natpro", params.natpro}
-  };
-
-  std::string kernelSource = inja::render(std::string(StrFastenKernelTemplate), data);
+  kainjow::mustache::data data;
+  data.set("include", std::string(kDeviceInclude));
+  data.set("max_ppwi", std::to_string(MAX_PPWI));
+  data.set("posesPerWI", std::to_string(params.posesPerWI));
+  data.set("nposes", std::to_string(params.nposes));
+  data.set("natlig", std::to_string(params.natlig));
+  data.set("natpro", std::to_string(params.natpro));
+  kainjow::mustache::mustache tmpl{std::string(StrFastenKernelTemplate)};
+  std::string kernelSource = tmpl.render(data);
   const auto specialize_ms = specializeTimer.elapsed();
   Logger::outs("Proteus") << "Specialized Kernel Construction "
                           << specialize_ms << " ms\n";

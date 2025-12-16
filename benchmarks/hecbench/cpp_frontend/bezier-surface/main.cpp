@@ -52,7 +52,7 @@
 #include <proteus/TimeTracing.hpp>
 
 #include "../../../gpu/gpu_common.h"
-#include "inja/inja.h"
+#include "mustache/mustache.hpp"
 
 using namespace proteus;
 
@@ -328,15 +328,14 @@ void run(float *in,
 
   Timer T;
   T.reset();
-  inja::json data = {
-      {"include", std::string{kDeviceInclude}},
-      {"in_size_i", in_size_i},
-      {"in_size_j", in_size_j},
-      {"out_size_i", out_size_i},
-      {"out_size_j", out_size_j}
-  };
-
-  const std::string kernelSource = inja::render(std::string{StrBezierKernelTemplate}, data);
+  kainjow::mustache::data data;
+  data.set("include", std::string{kDeviceInclude});
+  data.set("in_size_i", std::to_string(in_size_i));
+  data.set("in_size_j", std::to_string(in_size_j));
+  data.set("out_size_i", std::to_string(out_size_i));
+  data.set("out_size_j", std::to_string(out_size_j));
+  kainjow::mustache::mustache tmpl{std::string{StrBezierKernelTemplate}};
+  const std::string kernelSource = tmpl.render(data);
   Logger::outs("Proteus") << "Specialized Kernel Construction " << T.elapsed() << " ms\n";
   CppJitModule module{TARGET, kernelSource};
   module.compile();

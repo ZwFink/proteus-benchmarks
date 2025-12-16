@@ -10,7 +10,7 @@
 #include <proteus/CppJitModule.hpp>
 #include <proteus/Logger.hpp>
 #include <proteus/TimeTracing.hpp>
-#include "inja/inja.h"
+#include "mustache/mustache.hpp"
 
 using namespace proteus;
 #include "../../../gpu/gpu_common.h"
@@ -219,16 +219,16 @@ static auto getRegSharedTiledMatMulKernel(int N)
 {
   Timer specializeTimer;
   specializeTimer.reset();
-  inja::json data = {
-    {"include", std::string{kDeviceInclude}},
-    {"N", N},
-    {"BlockTileM", BlockTileM},
-    {"KTile", KTile},
-    {"BlockTileN", BlockTileN},
-    {"RegTileM", RegTileM},
-    {"RegTileN", RegTileN}
-  };
-  auto KernelStr = inja::render(std::string{StrGpuRegSharedTiledMatmulKernelTemplate}, data);
+  kainjow::mustache::data data;
+  data.set("include", std::string{kDeviceInclude});
+  data.set("N", std::to_string(N));
+  data.set("BlockTileM", std::to_string(BlockTileM));
+  data.set("KTile", std::to_string(KTile));
+  data.set("BlockTileN", std::to_string(BlockTileN));
+  data.set("RegTileM", std::to_string(RegTileM));
+  data.set("RegTileN", std::to_string(RegTileN));
+  kainjow::mustache::mustache tmpl{std::string{StrGpuRegSharedTiledMatmulKernelTemplate}};
+  auto KernelStr = tmpl.render(data);
   const auto specialize_ms = specializeTimer.elapsed();
   Logger::outs("Proteus") << "Specialized Kernel Construction "
                           << specialize_ms << " ms\n";
@@ -241,11 +241,11 @@ static auto getNontiledMatMulKernel(int N)
 {
   Timer specializeTimer;
   specializeTimer.reset();
-  inja::json data = {
-    {"include", std::string{kDeviceInclude}},
-    {"N", N}
-  };
-  auto KernelStr = inja::render(std::string{StrGpuNontiledMatmulKernelTemplate}, data);
+  kainjow::mustache::data data;
+  data.set("include", std::string{kDeviceInclude});
+  data.set("N", std::to_string(N));
+  kainjow::mustache::mustache tmpl{std::string{StrGpuNontiledMatmulKernelTemplate}};
+  auto KernelStr = tmpl.render(data);
   const auto specialize_ms = specializeTimer.elapsed();
   Logger::outs("Proteus") << "Specialized Kernel Construction "
                           << specialize_ms << " ms\n";

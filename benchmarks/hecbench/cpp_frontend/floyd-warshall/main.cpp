@@ -9,7 +9,7 @@
 #include <proteus/CppJitModule.hpp>
 #include <proteus/Logger.hpp>
 #include <proteus/TimeTracing.hpp>
-#include "inja/inja.h"
+#include "mustache/mustache.hpp"
 
 #include "../../../gpu/gpu_common.h"
 
@@ -101,11 +101,11 @@ static auto getFloydWarshallKernel(unsigned int numNodes)
 {
   Timer specializeTimer;
   specializeTimer.reset();
-  inja::json data = {
-    {"include", std::string{kDeviceInclude}},
-    {"numNodes", numNodes}
-  };
-  auto kernelSource = inja::render(std::string{StrFloydWarshallKernelTemplate}, data);
+  kainjow::mustache::data data;
+  data.set("include", std::string{kDeviceInclude});
+  data.set("numNodes", std::to_string(numNodes));
+  kainjow::mustache::mustache tmpl{std::string{StrFloydWarshallKernelTemplate}};
+  auto kernelSource = tmpl.render(data);
   const auto specialize_ms = specializeTimer.elapsed();
   Logger::outs("Proteus") << "Specialized Kernel Construction "
                           << specialize_ms << " ms\n";
