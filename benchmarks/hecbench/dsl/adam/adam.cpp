@@ -1,6 +1,7 @@
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitFrontend.hpp>
 #include <proteus/JitInterface.hpp>
+#include <proteus/Logger.hpp>
 #include <proteus/TimeTracing.hpp>
 
 #include <chrono>
@@ -95,6 +96,7 @@ auto createJitModuleSpecial(float _b1, float _b2, float _eps, float _grad_scale,
 }
 
 int main(int argc, char *argv[]) {
+  proteus::init();
   if (argc < 4 || argc > 5) {
     printf("Usage: %s <vector size> <number of time steps> <repeat>\n",
            argv[0]);
@@ -188,5 +190,6 @@ int main(int argc, char *argv[]) {
   free(v);
   free(g);
   free(r);
+  proteus::finalize();
   return 0;
 }

@@ -1,5 +1,6 @@
 #include "../../../gpu/gpu_common.h"
 #include <proteus/JitFrontend.hpp>
+#include <proteus/Logger.hpp>
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitInterface.hpp>
 #include <proteus/TimeTracing.hpp>
@@ -129,8 +130,8 @@ static auto getRegSharedTiledMatmulKernel(int N, int blockTileM, int blockTileN,
       {
         auto I = F.declVar<int>("i");
         auto J = F.declVar<int>("j");
-          F.forLoop<int>({I, Zero, RegTileM, One}, [&]() {
-            F.forLoop<int>({J, Zero, RegTileN, One}, [&]() {
+          F.forLoop<int>(I, Zero, RegTileM, One, [&]() {
+            F.forLoop<int>(J, Zero, RegTileN, One, [&]() {
               auto Cidx = I * RegTileN + J;
             Creg[Cidx] = 0.0;
           }).emit();
@@ -139,7 +140,7 @@ static auto getRegSharedTiledMatmulKernel(int N, int blockTileM, int blockTileN,
 
       // Loop over K dimension in tiles of kTile
       auto KBase = F.declVar<int>("KBase");
-      F.forLoop<int>({KBase, Zero, Nvar, KTile}, [&]() {
+      F.forLoop<int>(KBase, Zero, Nvar, KTile, [&]() {
         // Cooperative load of A and B tiles into shared memory.
         auto Tid = Tidy * ThreadsX + Tidx; // 0 .. (blockTileM/regTileM*blockTileN/regTileN - 1)
 
@@ -193,18 +194,18 @@ static auto getRegSharedTiledMatmulKernel(int N, int blockTileM, int blockTileN,
 
         // Compute this micro-tile using the shared tiles and register blocking
         auto KIt = F.declVar<int>("KIt");
-        F.forLoop<int>({KIt, Zero, KTile, One}, [&]() {
+        F.forLoop<int>(KIt, Zero, KTile, One, [&]() {
           // Load rows/cols into registers
           auto I = F.declVar<int>("i");
           auto J = F.declVar<int>("j");
 
-          F.forLoop<int>({I, Zero, RegTileM, One}, [&]() {
+          F.forLoop<int>(I, Zero, RegTileM, One, [&]() {
             auto r = Tidy * RegTileM + I;
             auto asIdx = r * KTile + KIt;
             Areg[I] = AsTile[asIdx];
           }).emit();
 
-          F.forLoop<int>({J, Zero, RegTileN, One}, [&]() {
+          F.forLoop<int>(J, Zero, RegTileN, One, [&]() {
             auto c = Tidx * RegTileN + J;
             auto bsIdx = KIt * BlockTileN + c;
             Breg[J] = BsTile[bsIdx];
@@ -213,13 +214,13 @@ static auto getRegSharedTiledMatmulKernel(int N, int blockTileM, int blockTileN,
           // FMA on the micro-tile
           auto Ii = F.declVar<int>("ii");
           auto Jj = F.declVar<int>("jj");
-          F.forLoop<int>({Ii, Zero, RegTileM, One}, [&]() {
-            F.forLoop<int>({Jj, Zero, RegTileN, One}, [&]() {
+          F.forLoop<int>(Ii, Zero, RegTileM, One, [&]() {
+            F.forLoop<int>(Jj, Zero, RegTileN, One, [&]() {
               auto Cidx = Ii * RegTileN + Jj;
-              Creg[Cidx] = Creg[Cidx] + (Areg[Ii] * Breg[Jj]);
+              Creg[Cidx] += Areg[Ii] * Breg[Jj];
             }).emit();
           }).emit();
-        }).emit();
+        }).unroll().emit();
 
         F.callBuiltin(syncThreads);
       }).emit();
@@ -228,8 +229,8 @@ static auto getRegSharedTiledMatmulKernel(int N, int blockTileM, int blockTileN,
       {
         auto I = F.declVar<int>("i");
         auto J = F.declVar<int>("j");
-        F.forLoop<int>({I, Zero, RegTileM, One}, [&]() {
-          F.forLoop<int>({J, Zero, RegTileN, One}, [&]() {
+        F.forLoop<int>(I, Zero, RegTileM, One, [&]() {
+          F.forLoop<int>(J, Zero, RegTileN, One, [&]() {
             auto Cidx = (Row0 + I) * N + (Col0 + J);
             auto Ridx = I * RegTileN + J;
             C[Cidx] = Creg[Ridx];

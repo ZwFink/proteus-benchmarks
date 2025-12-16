@@ -1,6 +1,9 @@
 #include "../../../gpu/gpu_common.h"
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitFrontend.hpp>
+#include <proteus/JitInterface.hpp>
+#include <proteus/Logger.hpp>
+#include <proteus/TimeTracing.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -417,6 +420,7 @@ free(gpu_out);
 }
 
 int main(int argc, char **argv) {
+    proteus::init();
     gpu::warmup();
     const Params p(argc, argv);
     int num_points   = (p.in_size_i + 1) * (p.in_size_j + 1);
@@ -432,5 +436,6 @@ int main(int argc, char **argv) {
     run(in, p.in_size_i, p.in_size_j, p.out_size_i, p.out_size_j, p);
   
     free(in);
+    proteus::finalize();
     return 0;
   }

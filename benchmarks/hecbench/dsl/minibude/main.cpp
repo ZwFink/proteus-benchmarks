@@ -18,6 +18,7 @@
 #include <vector>
 
 #include <proteus/JitFrontend.hpp>
+#include <proteus/Logger.hpp>
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitInterface.hpp>
 #include <proteus/TimeTracing.hpp>

@@ -1,6 +1,7 @@
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitFrontend.hpp>
 #include <proteus/JitInterface.hpp>
+#include <proteus/Logger.hpp>
 #include <proteus/TimeTracing.hpp>
 
 #include <cassert>

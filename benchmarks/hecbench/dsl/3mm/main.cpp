@@ -1,4 +1,5 @@
 #include <proteus/JitFrontend.hpp>
+#include <proteus/Logger.hpp>
 #include <proteus/Frontend/Builtins.hpp>
 #include <proteus/JitInterface.hpp>
 #include <proteus/TimeTracing.hpp>
@@ -111,8 +112,8 @@ static auto getRegSharedTiledMatmulKernel(int N, int blockTileM, int blockTileN,
       {
         auto I = F.declVar<int>("i");
         auto J = F.declVar<int>("j");
-        F.forLoop<int>({I, Zero, RegTileM, One}, [&]() {
-          F.forLoop<int>({J, Zero, RegTileN, One}, [&]() {
+        F.forLoop<int>(I, Zero, RegTileM, One, [&]() {
+          F.forLoop<int>(J, Zero, RegTileN, One, [&]() {
             auto Cidx = I * RegTileN + J;
             Creg[Cidx] = 0.0;
           }).emit();
@@ -120,7 +121,7 @@ static auto getRegSharedTiledMatmulKernel(int N, int blockTileM, int blockTileN,
       }
 
       auto KBase = F.declVar<int>("KBase");
-      F.forLoop<int>({KBase, Zero, Nvar, KTile}, [&]() {
+      F.forLoop<int>(KBase, Zero, Nvar, KTile, [&]() {
         auto Tid = Tidy * ThreadsX + Tidx;
 
         auto APlaneSize = BlockTileM * KTile;
@@ -170,17 +171,17 @@ static auto getRegSharedTiledMatmulKernel(int N, int blockTileM, int blockTileN,
         F.callBuiltin(syncThreads);
 
         auto KIt = F.declVar<int>("KIt");
-        F.forLoop<int>({KIt, Zero, KTile, One}, [&]() {
+        F.forLoop<int>(KIt, Zero, KTile, One, [&]() {
           auto I = F.declVar<int>("i");
           auto J = F.declVar<int>("j");
 
-          F.forLoop<int>({I, Zero, RegTileM, One}, [&]() {
+          F.forLoop<int>(I, Zero, RegTileM, One, [&]() {
             auto r = Tidy * RegTileM + I;
             auto asIdx = r * KTile + KIt;
             Areg[I] = AsTile[asIdx];
           }).emit();
 
-          F.forLoop<int>({J, Zero, RegTileN, One}, [&]() {
+          F.forLoop<int>(J, Zero, RegTileN, One, [&]() {
             auto c = Tidx * RegTileN + J;
             auto bsIdx = KIt * BlockTileN + c;
             Breg[J] = BsTile[bsIdx];
@@ -188,8 +189,8 @@ static auto getRegSharedTiledMatmulKernel(int N, int blockTileM, int blockTileN,
 
           auto Ii = F.declVar<int>("ii");
           auto Jj = F.declVar<int>("jj");
-          F.forLoop<int>({Ii, Zero, RegTileM, One}, [&]() {
-            F.forLoop<int>({Jj, Zero, RegTileN, One}, [&]() {
+          F.forLoop<int>(Ii, Zero, RegTileM, One, [&]() {
+            F.forLoop<int>(Jj, Zero, RegTileN, One, [&]() {
               auto Cidx = Ii * RegTileN + Jj;
               Creg[Cidx] = Creg[Cidx] + (Areg[Ii] * Breg[Jj]);
             }).emit();
@@ -202,8 +203,8 @@ static auto getRegSharedTiledMatmulKernel(int N, int blockTileM, int blockTileN,
       {
         auto I = F.declVar<int>("i");
         auto J = F.declVar<int>("j");
-        F.forLoop<int>({I, Zero, RegTileM, One}, [&]() {
-          F.forLoop<int>({J, Zero, RegTileN, One}, [&]() {
+        F.forLoop<int>(I, Zero, RegTileM, One, [&]() {
+          F.forLoop<int>(J, Zero, RegTileN, One, [&]() {
             auto Cidx = (Row0 + I) * N + (Col0 + J);
             auto Ridx = I * RegTileN + J;
             C[Cidx] = Creg[Ridx];
