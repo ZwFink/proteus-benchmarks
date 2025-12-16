@@ -9,6 +9,8 @@
 #include <tuple>
 #include "../../../gpu/gpu_common.h"
 #include <proteus/CppJitModule.hpp>
+#include <proteus/Logger.hpp>
+#include <proteus/TimeTracing.hpp>
 #include "inja/inja.h"
 
 using namespace proteus;

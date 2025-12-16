@@ -1,4 +1,6 @@
 #include <proteus/CppJitModule.hpp>
+#include <proteus/Logger.hpp>
+#include <proteus/TimeTracing.hpp>
 
 #include "../../../gpu/gpu_common.h"
 
