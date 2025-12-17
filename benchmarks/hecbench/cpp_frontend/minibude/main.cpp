@@ -411,7 +411,7 @@ Params loadParameters(const std::vector<std::string> &args) {
   return params;
 }
 
-std::vector<float> runKernel(const Params &params) {
+std::vector<float> runKernel(Params params) {
   std::vector<float> energies(params.nposes);
 
   // Build structure-of-arrays for protein and ligand

@@ -158,25 +158,23 @@ int main(int argc, char **argv) {
 
   const size_t matrixSizeBytes = static_cast<size_t>(numNodes) * static_cast<size_t>(numNodes) * sizeof(unsigned int);
 
-  unsigned int *pathDistanceMatrix = nullptr;
-  unsigned int *pathMatrix = nullptr;
+  unsigned int *pathDistanceMatrix = (unsigned int *)std::malloc(matrixSizeBytes);
+  unsigned int *pathMatrix = (unsigned int *)std::malloc(matrixSizeBytes);
+  assert(pathDistanceMatrix && pathMatrix);
+
   unsigned int *verificationPathDistanceMatrix = nullptr;
   unsigned int *verificationPathMatrix = nullptr;
 
-  if (do_verify) {
-    pathDistanceMatrix = (unsigned int *)std::malloc(matrixSizeBytes);
-    pathMatrix = (unsigned int *)std::malloc(matrixSizeBytes);
-    assert(pathDistanceMatrix && pathMatrix);
-
-    // Initialize path matrix
-    for (unsigned int i = 0; i < numNodes; ++i) {
-      for (unsigned int j = 0; j < i; ++j) {
-        pathMatrix[i * numNodes + j] = i;
-        pathMatrix[j * numNodes + i] = j;
-      }
-      pathMatrix[i * numNodes + i] = i;
+  // Initialize path matrix
+  for (unsigned int i = 0; i < numNodes; ++i) {
+    for (unsigned int j = 0; j < i; ++j) {
+      pathMatrix[i * numNodes + j] = i;
+      pathMatrix[j * numNodes + i] = j;
     }
+    pathMatrix[i * numNodes + i] = i;
+  }
 
+  if (do_verify) {
     verificationPathDistanceMatrix = (unsigned int *)std::malloc(matrixSizeBytes);
     verificationPathMatrix = (unsigned int *)std::malloc(matrixSizeBytes);
     assert(verificationPathDistanceMatrix && verificationPathMatrix);
@@ -265,9 +263,9 @@ int main(int argc, char **argv) {
     }
   }
 
+  std::free(pathDistanceMatrix);
+  std::free(pathMatrix);
   if (do_verify) {
-    std::free(pathDistanceMatrix);
-    std::free(pathMatrix);
     std::free(verificationPathDistanceMatrix);
     std::free(verificationPathMatrix);
   }

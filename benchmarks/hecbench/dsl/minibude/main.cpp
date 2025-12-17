@@ -521,7 +521,7 @@ Params loadParameters(const std::vector<std::string> &args) {
   return params;
 }
 
-std::vector<float> runKernel(const Params &params) {
+std::vector<float> runKernel(Params params) {
   auto energies = std::vector<float>(params.nposes);
 
   std::vector<float> h_protein_x(params.natpro), h_protein_y(params.natpro),
