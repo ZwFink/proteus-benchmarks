@@ -24,7 +24,7 @@ else
 endif
 
 program = minibude$(SUFFIX).x
-source  = main.cu kernel.cu
+source  = main.cu
 obj     = $(patsubst %.cu,%$(SUFFIX).o,$(source))
 
 ###############################################################################
