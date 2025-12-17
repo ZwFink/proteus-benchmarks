@@ -30,7 +30,6 @@ GPU_BACKEND ?= hip
 LLVM_INSTALL_DIR ?= ${ROCM_PATH}/llvm
 LLVM_CONFIG ?= ${LLVM_INSTALL_DIR}/bin/llvm-config
 CUDA_PATH ?= ${CUDA_HOME}
-CLANG_STATIC_LIBS := $(wildcard ${LLVM_INSTALL_DIR}/lib/libclang*.a)
 
 OFFLOAD_ARCH ?= gfx942
 
@@ -55,12 +54,9 @@ CUDA_CFLAGS = $(EXTRA_CFLAGS) -std=c++17 -Wall -DPROTEUS_ENABLE_CUDA \
   -fexceptions
 CUDA_LDFLAGS = -L${CUDA_PATH}/lib64 -Wl,-rpath,${CUDA_PATH}/lib64 \
   -L${LLVM_INSTALL_DIR}/lib -Wl,-rpath,${LLVM_INSTALL_DIR}/lib \
-  -Wl,--start-group \
-  $(CLANG_STATIC_LIBS) \
   $(shell ${LLVM_CONFIG} --libs) \
-  -Wl,--end-group \
-  $(shell ${LLVM_CONFIG} --system-libs)  \
-  -lcudart -lnvrtc -llldCommon -llldELF
+  $(shell ${LLVM_CONFIG} --system-libs) \
+  -lcudart -lnvrtc
 CUDA_LANG_FLAG :=
 
 ifeq ($(GPU_BACKEND),hip)

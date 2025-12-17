@@ -47,7 +47,7 @@ HIP_CFLAGS = $(EXTRA_CFLAGS) -std=c++17 -Wall -DPROTEUS_ENABLE_HIP \
 HIP_LDFLAGS = -L${ROCM_PATH}/lib -L${LLVM_INSTALL_DIR}/lib \
   $(shell ${LLVM_CONFIG} --libs) \
   $(shell ${LLVM_CONFIG} --system-libs) \
-  -llldCommon -llldELF -lamdhip64 -lhiprtc -lhiprtc-builtins -Wl,-rpath,${ROCM_PATH}/lib
+  -llldCommon -llldELF -Wl,-rpath,${ROCM_PATH}/lib
 HIP_LANG_FLAG := -x hip
 
 # CUDA (NVIDIA)
@@ -60,7 +60,7 @@ CUDA_LDFLAGS = -L${CUDA_PATH}/lib64 -Wl,-rpath,${CUDA_PATH}/lib64 \
   -L${LLVM_INSTALL_DIR}/lib -Wl,-rpath,${LLVM_INSTALL_DIR}/lib \
   $(shell ${LLVM_CONFIG} --libs) \
   $(shell ${LLVM_CONFIG} --system-libs) \
-  -lcudart -lnvrtc
+  -lcudart -lnvrtc -pthread
 CUDA_LANG_FLAG :=
 
 # Select backend
@@ -88,7 +88,7 @@ ifeq ($(OPTIMIZE),yes)
 endif
 
 # Always link Proteus and pthread
-LDFLAGS += -Wl,-rpath,${PROTEUS_PATH}/lib64 -L${PROTEUS_PATH}/lib64/ -lproteus -pthread
+LDFLAGS += -Wl,-rpath,${PROTEUS_PATH}/lib64 -L${PROTEUS_PATH}/lib64/ -lproteus
 
 # Add CUDA driver/JIT libs AFTER libproteus when targeting CUDA
 ifeq ($(GPU_BACKEND),cuda)
