@@ -454,8 +454,8 @@ def render_platform_plot(platform_df: pd.DataFrame, platform: str, destination: 
         Patch(facecolor=bar_colors[label], edgecolor="none", label=label) for label in ordered_frontends
     ]
     cache_handles = [
-        Patch(facecolor="#CFCFCF", edgecolor="#111111", hatch="////", label="Uncached"),
-        Patch(facecolor="#CFCFCF", edgecolor="#111111", hatch="", label="Cached"),
+        Patch(facecolor="#CFCFCF", edgecolor="#111111", hatch="////", label="Cold cache"),
+        Patch(facecolor="#CFCFCF", edgecolor="#111111", hatch="", label="Warm cache"),
     ]
 
     legend_handles = frontend_handles + cache_handles

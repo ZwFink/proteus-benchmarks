@@ -167,6 +167,9 @@ def prepare_dataframe(df: pd.DataFrame, platform: str) -> pd.DataFrame:
     if melted.empty:
         raise ValueError("All stage timing values are NaN after filtering.")
 
+    if (melted["time_ms"] <= 0).any():
+        raise ValueError("Stage timing values must be positive.")
+
     melted["stage_label"] = melted["stage_column"].map(
         lambda column: STAGE_DEFINITIONS[column][0]
     )
@@ -285,12 +288,40 @@ def build_plot(df: pd.DataFrame, figure_size: tuple[float, float], show_legend:b
     stage_labels = [entry[0] for entry in STAGE_DEFINITIONS.values()]
     stage_colors = [entry[1] for entry in STAGE_DEFINITIONS.values()]
 
+    #print("df:", df[["benchmark", "time_ms", "stage_label", "approach_label"]].to_string())
+    print(
+        "df:\n",
+        #df.loc[(df["stage_label"] == "SKO") & (df["approach_label"] == "PJ-Annot.")][
+        df.loc[(df["stage_label"] == "DC")][
+            ["benchmark", "time_ms", "stage_label", "approach_label"]
+        ]
+        # .groupby(["approach_label"])["time_ms"]
+        # .mean()
+        .to_string(),
+    )
+    input("pausing for debug...")
+    sko = df.loc[df["stage_label"] == "DC"].copy()
+    stats = (
+        sko.groupby(["approach_label"], observed=True)
+        .agg(
+            mean_ms=("time_ms", "mean"),
+            std_ms=("time_ms", "std"),
+            n=("time_ms", "count"),
+        )
+        .reset_index()
+    )
+        # standard error of the mean
+    stats["sem_ms"] = stats["std_ms"] / np.sqrt(stats["n"].replace(0, np.nan))
+    print("stats:\n", stats.to_string())
+    input("pausing for debug...")
+
     plot = (
         ggplot(df, aes("x_pos", "time_ms", fill="stage_label"))
         + geom_col(
             width=df["bar_width"].iloc[0] if not df.empty else 0.6,
         )
         + scale_fill_manual(name="", values=stage_colors, breaks=stage_labels)
+        + scale_y_continuous(trans="log10")
         + scale_x_continuous(
             breaks=sorted(df["benchmark_center"].unique()),
             labels=[str(cat) for cat in df["benchmark_label"].cat.categories],
@@ -418,7 +449,7 @@ def save_plot(
     for extension in ("pdf", "png"):
         destination = output_dir / f"{basename}.{extension}"
         fig = plot.draw(show=False)
-        _apply_hatching_and_legends(fig, data, show_legend)
+        #_apply_hatching_and_legends(fig, data, show_legend)
         save_kwargs = {"bbox_inches": "tight"}
         if extension == "png":
             save_kwargs["dpi"] = dpi
